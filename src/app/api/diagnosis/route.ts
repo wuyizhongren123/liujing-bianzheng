@@ -223,12 +223,16 @@ function analyzeMeridian(answers: Answers): {
   if (answers.q3_heavy && (answers.q5_appetite === '食欲减退' || answers.q5_appetite === '不想吃东西')) scores['厥阴病'] += 2;
   // 寒热错杂加分：同时存在寒证和热证
   const hasColdSign = answers.q1_cold || (answers.q3_heavy && !answers.q1_fever);
-  const hasHeatSign = answers.q1_fever || answers.q2_spontaneous || (answers.q8_thirsty && answers.q8_thirst_level === '大渴引饮');
+  const hasHeatSign = answers.q1_fever || answers.q2_spontaneous || answers.q1_alternating || (answers.q8_thirsty && answers.q8_thirst_level === '大渴引饮');
   if (hasColdSign && hasHeatSign) scores['厥阴病'] += 3;
 
   // 找到得分最高的经
   const maxScore = Math.max(...Object.values(scores));
   const meridian = Object.entries(scores).find(([, score]) => score === maxScore)?.[0] || '太阳病';
+
+  // 调试日志：打印每经得分
+  console.log('[辨证评分]', JSON.stringify(scores));
+  console.log('[最高分经]', meridian, '得分:', maxScore);
 
   // 检查是否达到阈值
   const threshold = THRESHOLDS[meridian as keyof typeof THRESHOLDS];
@@ -638,7 +642,69 @@ export async function POST(request: NextRequest) {
     const name = body.name || userInfo.name;
     const age = body.age || userInfo.age;
     const weight = body.weight || userInfo.weight;
-    const answers = body.answers || {};
+    
+    // 字段映射：支持新格式（chills, fever等）和旧格式（q1_cold, q1_fever等）
+    const rawAnswers = body.answers || {};
+    const answers: Answers = {
+      // 第一问·寒热
+      q1_cold: rawAnswers.q1_cold ?? rawAnswers.chills ?? null,
+      q1_fever: rawAnswers.q1_fever ?? rawAnswers.fever ?? null,
+      q1_alternating: rawAnswers.q1_alternating ?? rawAnswers.alternatingChillsFever ?? null,
+      q1_sweat: rawAnswers.q1_sweat ?? (rawAnswers.sweating === false ? '无汗' : rawAnswers.sweating === true ? '有汗' : null),
+      
+      // 第二问·汗
+      q2_spontaneous: rawAnswers.q2_spontaneous ?? rawAnswers.spontaneousSweating ?? null,
+      q2_night: rawAnswers.q2_night ?? rawAnswers.nightSweating ?? null,
+      q2_location: rawAnswers.q2_location ?? null,
+      
+      // 第三问·头身
+      q3_headache: rawAnswers.q3_headache ?? rawAnswers.headache ?? null,
+      q3_head_location: rawAnswers.q3_head_location ?? null,
+      q3_body_pain: rawAnswers.q3_body_pain ?? rawAnswers.bodyAche ?? null,
+      q3_body_location: rawAnswers.q3_body_location ?? null,
+      q3_heavy: rawAnswers.q3_heavy ?? rawAnswers.fatigue ?? rawAnswers.bodyHeavy ?? null,
+      
+      // 第四问·便
+      q4_stool: rawAnswers.q4_stool ?? (rawAnswers.constipation ? '便秘' : rawAnswers.diarrhea ? '腹泻' : '正常'),
+      q4_urine: rawAnswers.q4_urine ?? (rawAnswers.urineDark ? '尿黄短少' : null),
+      
+      // 第五问·饮食
+      q5_appetite: rawAnswers.q5_appetite ?? (rawAnswers.appetite === false ? '食欲减退' : rawAnswers.appetite === true ? '正常' : null),
+      q5_nausea: rawAnswers.q5_nausea ?? rawAnswers.nausea ?? null,
+      
+      // 第六问·胸
+      q6_chest_tight: rawAnswers.q6_chest_tight ?? rawAnswers.chestTightness ?? rawAnswers.abdominalDistension ?? null,
+      q6_chest_pain: rawAnswers.q6_chest_pain ?? null,
+      q6_hypochondrium: rawAnswers.q6_hypochondrium ?? rawAnswers.hypochondriumFullness ?? null,
+      q6_palpitation: rawAnswers.q6_palpitation ?? rawAnswers.palpitations ?? null,
+      
+      // 第七问·聋
+      q7_tinnitus: rawAnswers.q7_tinnitus ?? rawAnswers.tinnitus ?? null,
+      q7_hearing: rawAnswers.q7_hearing ?? null,
+      
+      // 第八问·渴
+      q8_thirsty: rawAnswers.q8_thirsty ?? rawAnswers.thirst ?? null,
+      q8_thirst_level: rawAnswers.q8_thirst_level ?? rawAnswers.thirstLevel ?? null,
+      q8_drink_pref: rawAnswers.q8_drink_pref ?? null,
+      q8_taste: rawAnswers.q8_taste ?? (rawAnswers.bitterTaste === true ? '口苦' : null),
+      
+      // 第九问·旧病
+      q9_chronic: rawAnswers.q9_chronic ?? null,
+      q9_chronic_desc: rawAnswers.q9_chronic_desc || '',
+      q9_medicine: rawAnswers.q9_medicine ?? null,
+      q9_medicine_desc: rawAnswers.q9_medicine_desc || '',
+      q9_skin: rawAnswers.q9_skin ?? null,
+      q9_skin_desc: rawAnswers.q9_skin_desc || '',
+      q9_pain: rawAnswers.q9_pain ?? null,
+      q9_pain_desc: rawAnswers.q9_pain_desc || '',
+      
+      // 第十问·因
+      q10_duration: rawAnswers.q10_duration ?? null,
+      q10_cause: rawAnswers.q10_cause ?? null,
+    };
+
+    // 调试日志：打印映射后的answers
+    console.log('[诊断API] 映射后的answers:', JSON.stringify(answers, null, 2));
 
     if (!name || !age || !weight || !answers) {
       return NextResponse.json({ error: '缺少必要参数' }, { status: 400 });
