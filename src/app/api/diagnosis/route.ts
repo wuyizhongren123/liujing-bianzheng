@@ -765,8 +765,8 @@ export async function POST(request: NextRequest) {
       usage: prescriptionInfo.usage,
       effects: prescriptionInfo.effects,
       indications: prescriptionInfo.indications,
-      contraindications: prescriptionInfo.contraindications,
-      notes: fullNotes,
+      contraindications: "", // 禁忌不显示
+      notes: prescriptionInfo.notes, // 不包含截断方注意事项
       interception: {
         type: null, // 截断类型不显示，留在付费后的推理中
         reason: '', // 截断原因不显示，留在付费后的推理中
