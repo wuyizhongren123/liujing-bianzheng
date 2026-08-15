@@ -1,8 +1,22 @@
+'use client';
+
 import Link from 'next/link';
+import { useState } from 'react';
 
 const BOOK_COVER_URL = 'https://coze-coding-project.tos.coze.site/cli_attachment/2026-08-15/4210475031598347_1fcb33dce8bbeacac841a83259f75a64_coze_image_1786728580891.png?sign=1786849270-952071ab4c-0-083db8427ad52da1b9dc191bf65d73d26d89f4dd74e2729d0d66c7fd4f1200ea';
 
 export default function Home() {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyWechat = async () => {
+    try {
+      await navigator.clipboard.writeText('ZRLSGZRLS');
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('复制失败:', err);
+    }
+  };
   return (
     <div className="min-h-screen bg-gradient-to-b from-amber-50 to-orange-50">
       {/* 顶部导航 */}
@@ -27,11 +41,12 @@ export default function Home() {
             <div className="absolute -inset-4 bg-amber-200/30 rounded-2xl blur-xl group-hover:bg-amber-200/50 transition-all duration-500" />
             
             {/* 封面图片 */}
-            <div className="relative">
+            <div className="relative overflow-hidden rounded-lg">
               <img
                 src={BOOK_COVER_URL}
                 alt="六经辨证用药指导 - 郭中仁"
-                className="w-72 md:w-80 rounded-lg shadow-2xl ring-1 ring-amber-900/10 transition-transform duration-500 group-hover:scale-[1.02]"
+                className="w-72 md:w-80 h-auto rounded-lg shadow-2xl ring-1 ring-amber-900/10 transition-transform duration-500 group-hover:scale-[1.02] object-cover"
+                style={{ objectPosition: 'center top', aspectRatio: '3/4' }}
               />
               {/* 封面底部渐变遮罩 */}
               <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/40 to-transparent rounded-b-lg" />
@@ -144,11 +159,12 @@ export default function Home() {
       <footer className="bg-amber-900/90 text-amber-100/70 text-center py-6 mt-12">
         <p className="text-sm">六经辨证用药指导 · 郭中仁 编著</p>
         <p className="text-xs mt-1 text-amber-100/50">仅供学习参考，用药请遵医嘱</p>
-        <div className="mt-4 inline-flex items-center gap-2 bg-amber-800/50 rounded-lg px-4 py-2">
+        <div className="mt-4 inline-flex items-center gap-2 bg-amber-800/50 rounded-lg px-4 py-2 cursor-pointer hover:bg-amber-800/70 transition-colors" onClick={handleCopyWechat}>
           <svg className="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 24 24">
             <path d="M8.691 2.188C3.891 2.188 0 5.476 0 9.53c0 2.212 1.17 4.203 3.002 5.55a.59.59 0 01.213.665l-.39 1.48c-.019.07-.048.141-.048.213 0 .163.13.295.29.295a.326.326 0 00.167-.054l1.903-1.114a.864.864 0 01.717-.098 10.16 10.16 0 002.837.403c.276 0 .543-.027.811-.05-.857-2.578.157-4.972 1.932-6.446 1.703-1.415 3.882-1.98 5.853-1.838-.576-3.583-4.196-6.348-8.596-6.348zM5.785 5.991c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 01-1.162 1.178A1.17 1.17 0 014.623 7.17c0-.651.52-1.18 1.162-1.18zm5.813 0c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 01-1.162 1.178 1.17 1.17 0 01-1.162-1.178c0-.651.52-1.18 1.162-1.18zm5.34 2.867c-1.797-.052-3.746.512-5.28 1.786-1.72 1.428-2.687 3.72-1.78 6.22.944 2.453 3.666 4.229 6.884 4.229.826 0 1.622-.12 2.361-.336a.722.722 0 01.598.082l1.584.926a.272.272 0 00.14.047c.134 0 .24-.111.24-.247 0-.06-.023-.12-.038-.177l-.327-1.233a.582.582 0 01-.023-.156.49.49 0 01.201-.398C23.024 18.48 24 16.82 24 14.98c0-3.21-2.931-5.837-7.062-6.122zm-2.18 2.769c.535 0 .969.44.969.982a.976.976 0 01-.969.983.976.976 0 01-.969-.983c0-.542.434-.982.97-.982zm4.844 0c.535 0 .969.44.969.982a.976.976 0 01-.969.983.976.976 0 01-.969-.983c0-.542.434-.982.969-.982z"/>
           </svg>
           <span className="text-xs text-amber-100/80">微信号：<span className="font-mono text-green-300">ZRLSGZRLS</span></span>
+          {copied && <span className="text-xs text-green-300 ml-2">已复制</span>}
         </div>
       </footer>
     </div>
