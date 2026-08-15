@@ -747,6 +747,13 @@ export async function POST(request: NextRequest) {
     const adjustedDosage = adjustDosage(prescriptionInfo.dosage, age, weight);
 
     // 构建结果
+    // 构建合方信息（合并到推荐用药中）
+    const combinedPrescription = combinedPrescriptionInfo?.prescription || (interception.type === '少阳枢' ? '小柴胡汤' : '四逆汤');
+    const combinedNotes = combinedPrescriptionInfo?.notes || '';
+    
+    // 将合方信息合并到 notes 中
+    const fullNotes = prescriptionInfo.notes + (combinedNotes ? `\n\n【枢机截断合方】\n${combinedNotes}` : '');
+
     const result: DiagnosisResult = {
       meridian,
       meridianFull: meridian,
@@ -759,11 +766,11 @@ export async function POST(request: NextRequest) {
       effects: prescriptionInfo.effects,
       indications: prescriptionInfo.indications,
       contraindications: prescriptionInfo.contraindications,
-      notes: prescriptionInfo.notes,
+      notes: fullNotes,
       interception: {
-        type: interception.type,
-        reason: interception.reason,
-        combinedPrescription: combinedPrescriptionInfo?.prescription || (interception.type === '少阳枢' ? '小柴胡汤' : '四逆汤'),
+        type: null, // 截断类型不显示，留在付费后的推理中
+        reason: '', // 截断原因不显示，留在付费后的推理中
+        combinedPrescription: combinedPrescription, // 合方显示在推荐用药中
       },
       dietaryAdvice: [
         '忌生冷寒凉',
