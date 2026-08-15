@@ -114,3 +114,53 @@ export const prescriptionHerbs = pgTable(
 		index("prescription_herbs_herb_id_idx").on(table.herb_id),
 	]
 );
+
+// 六经传变关系表 - 记录每经的传变方向和截断方法
+export const meridianTransmissions = pgTable(
+	"meridian_transmissions",
+	{
+		id: serial().primaryKey(),
+		source_meridian_id: integer("source_meridian_id").notNull().references(() => sixMeridians.id, { onDelete: "cascade" }),
+		target_meridian_id: integer("target_meridian_id").notNull().references(() => sixMeridians.id, { onDelete: "cascade" }),
+		transmission_type: varchar("transmission_type", { length: 50 }), // 传变类型：循经传、越经传、表里传
+		warning_symptoms: text("warning_symptoms"), // 传变先兆症状
+		interception_principle: text("interception_principle"), // 截断原则
+		interception_method: text("interception_method"), // 截断方法
+		herb_additions: text("herb_additions"), // 加减药物
+		combined_prescription: text("combined_prescription"), // 合方名称
+		combined_prescription_desc: text("combined_prescription_desc"), // 合方说明
+		purpose: text("purpose"), // 截断目的
+		sort_order: integer("sort_order").notNull().default(0),
+		created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+		updated_at: timestamp("updated_at", { withTimezone: true }),
+	},
+	(table) => [
+		index("meridian_transmissions_source_idx").on(table.source_meridian_id),
+		index("meridian_transmissions_target_idx").on(table.target_meridian_id),
+	]
+);
+
+// 截断方剂表 - 记录传变截断的合方详情
+export const interceptionPrescriptions = pgTable(
+	"interception_prescriptions",
+	{
+		id: serial().primaryKey(),
+		transmission_id: integer("transmission_id").notNull().references(() => meridianTransmissions.id, { onDelete: "cascade" }),
+		syndrome_id: integer("syndrome_id").references(() => syndromes.id, { onDelete: "set null" }), // 关联的证型（可选）
+		name: varchar("name", { length: 100 }).notNull(), // 合方名称
+		base_prescription: varchar("base_prescription", { length: 100 }), // 基础方
+		additional_herbs: text("additional_herbs"), // 加味药物
+		composition: text("composition"), // 完整组成
+		effects: text("effects"), // 功效
+		indications: text("indications"), // 主治
+		usage_notes: text("usage_notes"), // 使用注意
+		interception_purpose: text("interception_purpose"), // 截断目的说明
+		sort_order: integer("sort_order").notNull().default(0),
+		created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+		updated_at: timestamp("updated_at", { withTimezone: true }),
+	},
+	(table) => [
+		index("interception_prescriptions_transmission_id_idx").on(table.transmission_id),
+		index("interception_prescriptions_syndrome_id_idx").on(table.syndrome_id),
+	]
+);

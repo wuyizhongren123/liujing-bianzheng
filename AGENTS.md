@@ -21,7 +21,8 @@
 │   │   ├── api/                    # API路由
 │   │   │   ├── meridians/          # 六经数据接口
 │   │   │   │   ├── route.ts        # GET /api/meridians
-│   │   │   │   └── [id]/syndromes/ # GET /api/meridians/[id]/syndromes
+│   │   │   │   ├── [id]/syndromes/ # GET /api/meridians/[id]/syndromes
+│   │   │   │   └── [id]/transmissions/ # GET /api/meridians/[id]/transmissions
 │   │   │   ├── syndromes/          # 证型数据接口
 │   │   │   │   └── [id]/prescriptions/ # GET /api/syndromes/[id]/prescriptions
 │   │   │   ├── prescriptions/      # 方剂数据接口
@@ -46,6 +47,7 @@
 ### 2. 辨证论治 (/diagnosis)
 - 选择六经（太阳、阳明、少阳、太阴、少阴、厥阴）
 - 查看经络详情（概述、病机、主要症状）
+- **传变预警与截断**：显示当前经的传变方向、先兆症状、截断方法和合方推荐
 - 选择证型，查看证型详情（症状、舌象、脉象、病机、治法）
 - 获取推荐方剂（组成、用量、制法、用法、功效、主治、禁忌）
 
@@ -64,6 +66,7 @@
 |------|------|------|
 | `/api/meridians` | GET | 获取六经列表 |
 | `/api/meridians/[id]/syndromes` | GET | 获取某经的证型列表 |
+| `/api/meridians/[id]/transmissions` | GET | 获取某经的传变关系与截断方剂 |
 | `/api/syndromes/[id]/prescriptions` | GET | 获取某证型的方剂列表 |
 | `/api/prescriptions` | GET | 获取所有方剂 |
 | `/api/herbs` | GET | 获取所有药材 |
@@ -87,12 +90,20 @@
 5. **prescription_herbs** - 方剂药材关联表
    - id, prescription_id, herb_id, dosage, preparation, sort_order
 
+6. **meridian_transmissions** - 六经传变关系表
+   - id, source_meridian_id, target_meridian_id, transmission_type, warning_symptoms, interception_principle, interception_method, herb_additions, combined_prescription, combined_prescription_desc, purpose, sort_order
+
+7. **interception_prescriptions** - 截断方剂表
+   - id, transmission_id, syndrome_id, name, base_prescription, additional_herbs, composition, effects, indications, usage_notes, interception_purpose, sort_order
+
 ### 初始数据
 
 - 六经：太阳病、阳明病、少阳病、太阴病、少阴病、厥阴病
 - 证型：16个证型（每经2-4个）
 - 方剂：16个经典方剂（桂枝汤、麻黄汤、小柴胡汤、白虎汤等）
 - 药材：20味常用中药
+- 传变关系：8条传变路径（太阳→阳明、少阳→阳明、阳明→少阳、阳明→太阴、太阴→少阴、少阴→厥阴、厥阴→复发等）
+- 截断方剂：11个截断合方（葛根汤加石膏知母、大柴胡汤、附子理中汤等）
 
 ## 开发命令
 
