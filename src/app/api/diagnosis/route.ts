@@ -75,7 +75,7 @@ interface DiagnosisResult {
   contraindications: string;
   notes: string;
   interception: {
-    type: '少阳枢' | '少阴枢' | null;
+    type: '少阳枢' | '少阴枢' | '阴阳双枢' | null;
     reason: string;
     combinedPrescription: string;
   };
@@ -291,47 +291,67 @@ function analyzeMeridian(answers: Answers): {
   };
 }
 
-// 开合枢截断逻辑
-function checkInterception(answers: Answers, scores: Record<string, number>): { 
-  type: '少阳枢' | '少阴枢' | null; 
+// 开合枢截断逻辑 - 根据六经传变规律
+// 阳经病（太阳、阳明、少阳）：加少阳方守住枢机
+// 阴经病（太阴、少阴、厥阴）：加少阴方+少阳方，保证病传阳明而止
+function checkInterception(answers: Answers, scores: Record<string, number>, currentMeridian: string): { 
+  type: '少阳枢' | '少阴枢' | '阴阳双枢' | null; 
   reason: string;
   combinedMeridian?: string;
+  isYangMeridian?: boolean; // 是否为阳经病
 } {
-  // 检查少阳枢机不利
+  // 判断当前经是阳经还是阴经
+  const yangMerdians = ['太阳病', '阳明病', '少阳病'];
+  const yinMeridians = ['太阴病', '少阴病', '厥阴病'];
+  const isYangMeridian = yangMerdians.includes(currentMeridian);
+  const isYinMeridian = yinMeridians.includes(currentMeridian);
+
+  // 检查少阳枢机不利症状
   const shaoyangSigns = [
     answers.q8_taste === '口苦',
     answers.q6_hypochondrium,
     answers.q1_alternating,
+    answers.q5_nausea,
   ].filter(Boolean).length;
 
-  // 检查少阴枢机不利
+  // 检查少阴枢机不利症状
   const shaoyinSigns = [
     answers.q3_heavy && answers.q1_cold && !answers.q1_fever,
     answers.q4_stool === '腹泻' && answers.q3_heavy,
+    answers.q1_cold && !answers.q1_fever && answers.q3_heavy,
   ].filter(Boolean).length;
 
   // 西药史阳性
   const hasWesternMedicine = answers.q9_medicine === true;
 
-  // 获取当前辨证的经
-  const maxScore = Math.max(...Object.values(scores));
-  const currentMeridian = Object.entries(scores).find(([, score]) => score === maxScore)?.[0] || '太阳病';
-
-  // 少阳为枢：任何经病见少阳枢机不利
-  if (shaoyangSigns >= 2 || hasWesternMedicine) {
+  // 阳经病：必须守少阳枢机，保证病不内传阴经
+  if (isYangMeridian) {
+    if (shaoyangSigns >= 2 || hasWesternMedicine) {
+      return {
+        type: '少阳枢',
+        reason: hasWesternMedicine 
+          ? '阳经病兼服西药，合小柴胡汤守少阳枢机，防内传' 
+          : `阳经病（${currentMeridian}）见少阳枢机不利之象，合小柴胡汤守枢机，防传阴经`,
+        combinedMeridian: currentMeridian,
+        isYangMeridian: true,
+      };
+    }
+    // 阳经病即使没有明显少阳症状，也应预防性守枢机
     return {
       type: '少阳枢',
-      reason: hasWesternMedicine ? '正在服用西药，合小柴胡汤调和枢机' : '见少阳枢机不利之象（口苦、胸胁满、寒热往来）',
+      reason: `阳经病（${currentMeridian}）当守少阳枢机，防邪内传阴经`,
       combinedMeridian: currentMeridian,
+      isYangMeridian: true,
     };
   }
 
-  // 少阴为枢：任何经病见少阴枢机不利
-  if (shaoyinSigns >= 2) {
+  // 阴经病：必须守少阴+少阳双枢，保证病传阳明而止
+  if (isYinMeridian) {
     return {
-      type: '少阴枢',
-      reason: '见少阴枢机不利之象（困倦、四肢冷、小便清长）',
+      type: '阴阳双枢',
+      reason: `阴经病（${currentMeridian}）当守少阴枢机温阳，合少阳枢机透邪外出，使病传阳明而解`,
       combinedMeridian: currentMeridian,
+      isYangMeridian: false,
     };
   }
 
@@ -477,7 +497,7 @@ function getPrescription(
 // 获取合方信息
 function getCombinedPrescription(
   currentMeridian: string,
-  interceptionType: '少阳枢' | '少阴枢'
+  interceptionType: '少阳枢' | '少阴枢' | '阴阳双枢'
 ): {
   prescription: string;
   composition: string;
@@ -498,7 +518,7 @@ function getCombinedPrescription(
     indications: string;
     notes: string;
   }> = {
-    // 少阳为枢合方
+    // 少阳为枢合方（阳经病）
     '太阳病_少阳枢': {
       prescription: '柴胡桂枝汤',
       composition: '柴胡、黄芩、人参、半夏、桂枝、白芍、生姜、大枣、甘草',
@@ -519,85 +539,45 @@ function getCombinedPrescription(
       indications: '少阳阳明合病，呕不止，心下急，郁郁微烦',
       notes: '大黄后下。忌生冷、油腻、辛辣。观察二便变化。儿童减量1/3，老人减量1/4。',
     },
-    '太阴病_少阳枢': {
-      prescription: '柴胡桂枝干姜汤',
-      composition: '柴胡、桂枝、干姜、瓜蒌根、黄芩、牡蛎、甘草',
-      dosage: '柴胡24g，桂枝9g，干姜6g，瓜蒌根12g，黄芩9g，牡蛎12g，甘草6g',
+    '少阳病_少阳枢': {
+      prescription: '小柴胡汤',
+      composition: '柴胡、黄芩、人参、半夏、生姜、大枣、甘草',
+      dosage: '柴胡24g，黄芩9g，人参9g，半夏9g，生姜9g，大枣4枚，甘草6g',
       preparation: '水煎服',
-      usage: '温服',
-      effects: '和解少阳，温中散寒',
-      indications: '少阳太阴合病，胸胁满微结，小便不利，渴而不呕，但头汗出',
-      notes: '温服。忌生冷、油腻、辛辣。观察寒热变化。儿童减量1/3，老人减量1/4。',
+      usage: '去滓再煎，温服',
+      effects: '和解少阳',
+      indications: '少阳证，寒热往来，胸胁苦满，默默不欲饮食，心烦喜呕',
+      notes: '去滓再煎，温服。忌生冷、油腻、辛辣。观察寒热变化。儿童减量1/3，老人减量1/4。',
     },
-    '少阴病_少阳枢': {
-      prescription: '柴胡加龙骨牡蛎汤变方',
-      composition: '柴胡、黄芩、人参、半夏、生姜、大枣、甘草、附子、龙骨、牡蛎',
-      dosage: '柴胡12g，黄芩6g，人参6g，半夏6g，生姜6g，大枣3枚，甘草6g，附子6g（先煎），龙骨15g（先煎），牡蛎15g（先煎）',
+    // 阴阳双枢合方（阴经病：少阴+少阳）
+    '太阴病_阴阳双枢': {
+      prescription: '附子理中汤合小柴胡汤化裁',
+      composition: '人参、白术、干姜、附子、甘草、柴胡、黄芩、半夏',
+      dosage: '人参9g，白术9g，干姜9g，附子15g（先煎），甘草6g，柴胡12g，黄芩6g，半夏6g',
       preparation: '水煎服',
       usage: '温服',
-      effects: '和解少阳，温阳安神',
-      indications: '少阳少阴合病，胸满烦惊，小便不利',
-      notes: '附子、龙骨、牡蛎先煎30分钟。忌生冷、油腻、辛辣。观察神志变化。儿童减量1/3，老人减量1/4。',
+      effects: '温中健脾，和解少阳，透邪外出',
+      indications: '太阴病合少阳少阴枢机不利，腹满吐利兼胸胁苦满',
+      notes: '附子必须先煎30分钟以上。忌生冷、油腻、辛辣。观察二便及寒热变化。儿童减量1/3，老人减量1/4。',
     },
-    '厥阴病_少阳枢': {
-      prescription: '小柴胡汤合乌梅丸化裁',
-      composition: '柴胡、黄芩、人参、半夏、生姜、大枣、甘草、乌梅、黄连、黄柏',
-      dosage: '柴胡12g，黄芩6g，人参6g，半夏6g，生姜6g，大枣3枚，甘草6g，乌梅15g，黄连6g，黄柏6g',
+    '少阴病_阴阳双枢': {
+      prescription: '四逆汤合小柴胡汤化裁',
+      composition: '附子、干姜、甘草、柴胡、黄芩、人参、半夏',
+      dosage: '附子15g（先煎），干姜9g，甘草6g，柴胡12g，黄芩6g，人参6g，半夏6g',
       preparation: '水煎服',
       usage: '温服',
-      effects: '和解少阳，清上温下',
-      indications: '少阳厥阴合病，寒热错杂',
-      notes: '温服。忌生冷、油腻、辛辣。观察寒热变化。儿童减量1/3，老人减量1/4。',
+      effects: '回阳救逆，和解少阳，透邪外出',
+      indications: '少阴病合少阳枢机不利，四肢厥逆兼寒热往来',
+      notes: '附子必须先煎30分钟以上。忌生冷、油腻、辛辣。观察四肢温度及寒热变化。儿童减量1/3，老人减量1/4。',
     },
-    // 少阴为枢合方
-    '太阳病_少阴枢': {
-      prescription: '麻黄附子细辛汤',
-      composition: '麻黄、附子、细辛',
-      dosage: '麻黄6g，附子15g（先煎），细辛3g',
+    '厥阴病_阴阳双枢': {
+      prescription: '四逆汤合小柴胡汤合乌梅丸化裁',
+      composition: '附子、干姜、甘草、柴胡、黄芩、人参、半夏、乌梅、黄连',
+      dosage: '附子15g（先煎），干姜9g，甘草6g，柴胡12g，黄芩6g，人参6g，半夏6g，乌梅15g，黄连6g',
       preparation: '水煎服',
       usage: '温服',
-      effects: '温经散寒，助阳解表',
-      indications: '太阳少阴合病，发热恶寒，无汗，脉沉',
-      notes: '附子必须先煎30分钟以上。忌生冷、油腻、辛辣。观察汗出及脉搏变化。儿童减量1/3，老人减量1/4。',
-    },
-    '阳明病_少阴枢': {
-      prescription: '白虎汤合四逆汤化裁',
-      composition: '石膏、知母、甘草、粳米、附子、干姜',
-      dosage: '石膏30g（先煎），知母12g，甘草6g，粳米18g，附子6g（先煎），干姜6g',
-      preparation: '水煎服',
-      usage: '温服',
-      effects: '清热生津，回阳救逆',
-      indications: '阳明少阴合病，寒热错杂，危重证',
-      notes: '石膏、附子先煎30分钟。寒热错杂，需密切观察。忌生冷、油腻、辛辣。儿童减量1/3，老人减量1/4。',
-    },
-    '太阴病_少阴枢': {
-      prescription: '附子理中汤',
-      composition: '人参、白术、干姜、附子、甘草',
-      dosage: '人参9g，白术9g，干姜9g，附子15g（先煎），甘草6g',
-      preparation: '水煎服',
-      usage: '温服',
-      effects: '温中健脾，回阳救逆',
-      indications: '太阴少阴合病，腹满吐利，四肢厥冷',
-      notes: '附子必须先煎30分钟以上。忌生冷、油腻、辛辣。观察四肢温度及二便变化。儿童减量1/3，老人减量1/4。',
-    },
-    '少阴病_少阴枢': {
-      prescription: '四逆汤',
-      composition: '附子、干姜、甘草',
-      dosage: '附子15g（先煎），干姜9g，甘草6g',
-      preparation: '水煎服',
-      usage: '温服',
-      effects: '回阳救逆',
-      indications: '少阴病，四肢厥逆，脉微欲绝',
-      notes: '附子必须先煎30分钟以上。忌生冷、油腻、辛辣。观察四肢温度及脉搏变化。儿童减量1/3，老人减量1/4。',
-    },
-    '厥阴病_少阴枢': {
-      prescription: '四逆汤合乌梅丸化裁',
-      composition: '附子、干姜、甘草、乌梅、黄连、黄柏',
-      dosage: '附子15g（先煎），干姜9g，甘草6g，乌梅15g，黄连6g，黄柏6g',
-      preparation: '水煎服',
-      usage: '温服',
-      effects: '回阳救逆，清上温下',
-      indications: '厥阴少阴合病，寒热错杂，四肢厥逆',
+      effects: '回阳救逆，和解少阳，清上温下',
+      indications: '厥阴病合少阳少阴枢机不利，寒热错杂兼四肢厥逆',
       notes: '附子先煎30分钟。忌生冷、油腻、辛辣。观察寒热及四肢变化。儿童减量1/3，老人减量1/4。',
     },
   };
@@ -740,7 +720,7 @@ export async function POST(request: NextRequest) {
     } = analyzeMeridian(answers);
     
     // 开合枢截断检查
-    const interception = checkInterception(answers, scores);
+    const interception = checkInterception(answers, scores, meridian);
     
     // 获取方剂
     const prescriptionInfo = getPrescription(
