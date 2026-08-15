@@ -339,12 +339,15 @@ function adjustDosage(dosage: string, age: number, weight: number): string {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, age, weight, answers } = body as {
-      name: string;
-      age: number;
-      weight: number;
-      answers: Answers;
-    };
+    
+    // 兼容两种数据格式：
+    // 1. { userInfo: { name, age, weight }, answers } - 前端questions页面格式
+    // 2. { name, age, weight, answers } - 直接格式
+    const userInfo = body.userInfo || {};
+    const name = body.name || userInfo.name;
+    const age = body.age || userInfo.age;
+    const weight = body.weight || userInfo.weight;
+    const answers = body.answers || {};
 
     if (!name || !age || !weight || !answers) {
       return NextResponse.json({ error: '缺少必要参数' }, { status: 400 });
