@@ -98,12 +98,12 @@ function analyzeMeridian(answers: Answers): {
   meridian: string; 
   syndrome: string; 
   scores: Record<string, number>;
-  isTableExcess?: boolean; // 太阳表实证
-  isTableDeficiency?: boolean; // 太阳表虚证
-  isYangmingChannel?: boolean; // 阳明经证
-  isYangmingFu?: boolean; // 阳明腑证
-  isShaoyinCold?: boolean; // 少阴寒化证
-  isShaoyinHeat?: boolean; // 少阴热化证
+  isTableExcess?: boolean;
+  isTableDeficiency?: boolean;
+  isYangmingChannel?: boolean;
+  isYangmingFu?: boolean;
+  isShaoyinCold?: boolean;
+  isShaoyinHeat?: boolean;
 } {
   const scores: Record<string, number> = {
     '太阳病': 0,
@@ -115,16 +115,17 @@ function analyzeMeridian(answers: Answers): {
   };
 
   // ========== 太阳病评分（表证）==========
-  if (answers.q1_cold) scores['太阳病'] += 3; // 恶寒
-  if (answers.q1_fever) scores['太阳病'] += 2; // 发热
-  if (answers.q3_headache) scores['太阳病'] += 2; // 头痛
-  if (answers.q3_body_pain) scores['太阳病'] += 2; // 身痛
-  // 鼻塞、咳喘（简化处理）
-  if (answers.q1_cold && answers.q3_headache) scores['太阳病'] += 2; // 鼻塞简化
-  if (answers.q1_cold && answers.q1_fever) scores['太阳病'] += 1; // 咳喘简化
-  // 浮脉简化：恶寒+发热
-  if (answers.q1_cold && answers.q1_fever) scores['太阳病'] += 3; // 浮脉
-  // 有汗无汗
+  // 恶寒 +3
+  if (answers.q1_cold) scores['太阳病'] += 3;
+  // 发热 +2
+  if (answers.q1_fever) scores['太阳病'] += 2;
+  // 头痛 +2
+  if (answers.q3_headache) scores['太阳病'] += 2;
+  // 身痛 +2
+  if (answers.q3_body_pain) scores['太阳病'] += 2;
+  // 浮脉简化：恶寒+发热同时存在 +3
+  if (answers.q1_cold && answers.q1_fever) scores['太阳病'] += 3;
+  // 无汗（表实）+2，有汗（表虚）+1
   let isTableExcess = false;
   let isTableDeficiency = false;
   if (answers.q1_sweat === '无汗') {
@@ -136,14 +137,20 @@ function analyzeMeridian(answers: Answers): {
   }
 
   // ========== 阳明病评分（里热证）==========
-  if (answers.q1_fever && !answers.q1_cold) scores['阳明病'] += 3; // 高热
-  if (answers.q2_spontaneous) scores['阳明病'] += 3; // 大汗
-  if (answers.q8_thirsty && answers.q8_thirst_level === '大渴引饮') scores['阳明病'] += 3; // 大渴
-  if (answers.q4_stool === '便秘') scores['阳明病'] += 2; // 便秘
-  if (answers.q3_body_pain && answers.q4_stool === '便秘') scores['阳明病'] += 2; // 腹满痛简化
-  if (answers.q4_urine === '尿黄短少') scores['阳明病'] += 2; // 尿黄赤
-  // 洪大脉/滑实脉简化：高热+大汗
-  if (answers.q1_fever && answers.q2_spontaneous) scores['阳明病'] += 3;
+  // 高热（发热且不恶寒）+3
+  if (answers.q1_fever && !answers.q1_cold) scores['阳明病'] += 3;
+  // 大汗 +3
+  if (answers.q2_spontaneous) scores['阳明病'] += 3;
+  // 大渴引饮 +3
+  if (answers.q8_thirsty && answers.q8_thirst_level === '大渴引饮') scores['阳明病'] += 3;
+  // 便秘 +2
+  if (answers.q4_stool === '便秘') scores['阳明病'] += 2;
+  // 腹满痛（身痛+便秘）+2
+  if (answers.q3_body_pain && answers.q4_stool === '便秘') scores['阳明病'] += 2;
+  // 尿黄赤 +2
+  if (answers.q4_urine === '尿黄短少') scores['阳明病'] += 2;
+  // 洪大脉简化：高热+大汗 +3
+  if (answers.q1_fever && !answers.q1_cold && answers.q2_spontaneous) scores['阳明病'] += 3;
   let isYangmingChannel = false;
   let isYangmingFu = false;
   if (answers.q4_stool === '便秘') {
@@ -153,62 +160,87 @@ function analyzeMeridian(answers: Answers): {
   }
 
   // ========== 少阳病评分（半表半里）==========
-  if (answers.q8_taste === '口苦') scores['少阳病'] += 3; // 口苦
-  if (answers.q7_tinnitus) scores['少阳病'] += 2; // 目眩简化
-  if (answers.q6_hypochondrium) scores['少阳病'] += 3; // 胸胁苦满
-  if (answers.q5_nausea) scores['少阳病'] += 3; // 心烦喜呕
-  if (answers.q1_alternating) scores['少阳病'] += 3; // 寒热往来
-  if (answers.q5_appetite === '食欲减退' || answers.q5_appetite === '不想吃东西') scores['少阳病'] += 2; // 默默不欲饮食
-  // 弦脉简化：口苦+胸胁满
+  // 口苦 +3
+  if (answers.q8_taste === '口苦') scores['少阳病'] += 3;
+  // 目眩简化：耳鸣 +2
+  if (answers.q7_tinnitus) scores['少阳病'] += 2;
+  // 胸胁苦满 +3
+  if (answers.q6_hypochondrium) scores['少阳病'] += 3;
+  // 心烦喜呕 +3
+  if (answers.q5_nausea) scores['少阳病'] += 3;
+  // 寒热往来 +3
+  if (answers.q1_alternating) scores['少阳病'] += 3;
+  // 默默不欲饮食 +2
+  if (answers.q5_appetite === '食欲减退' || answers.q5_appetite === '不想吃东西') scores['少阳病'] += 2;
+  // 弦脉简化：口苦+胸胁满 +2
   if (answers.q8_taste === '口苦' && answers.q6_hypochondrium) scores['少阳病'] += 2;
 
   // ========== 太阴病评分（里虚寒）==========
-  if (answers.q3_body_pain && answers.q4_stool !== '正常') scores['太阴病'] += 3; // 腹满简化
-  if (answers.q4_stool === '腹泻' || answers.q4_stool === '稀溏') scores['太阴病'] += 3; // 自利
-  if (answers.q5_nausea) scores['太阴病'] += 2; // 呕吐
-  if (answers.q5_appetite === '食欲减退' || answers.q5_appetite === '不想吃东西') scores['太阴病'] += 2; // 食不下
-  if (!answers.q8_thirsty) scores['太阴病'] += 2; // 口不渴
-  if (answers.q3_heavy) scores['太阴病'] += 2; // 神疲乏力
-  // 面色萎黄简化：困倦+腹泻
-  if (answers.q3_heavy && (answers.q4_stool === '腹泻' || answers.q4_stool === '稀溏')) scores['太阴病'] += 1;
-  // 缓弱脉简化：困倦+口不渴
-  if (answers.q3_heavy && !answers.q8_thirsty) scores['太阴病'] += 2;
+  // 腹满（单独计算，不与身痛关联）+3
+  if (answers.q6_chest_tight && answers.q4_stool !== '正常' && answers.q4_stool !== '便秘') scores['太阴病'] += 3;
+  // 自利/下利 +3
+  if (answers.q4_stool === '腹泻' || answers.q4_stool === '稀溏') scores['太阴病'] += 3;
+  // 呕吐 +2
+  if (answers.q5_nausea) scores['太阴病'] += 2;
+  // 食不下 +2
+  if (answers.q5_appetite === '食欲减退' || answers.q5_appetite === '不想吃东西') scores['太阴病'] += 2;
+  // 口不渴 +2（必须同时有腹泻或呕吐才加分，避免误判）
+  if (!answers.q8_thirsty && (answers.q4_stool === '腹泻' || answers.q4_stool === '稀溏' || answers.q5_nausea)) scores['太阴病'] += 2;
+  // 神疲乏力 +2（必须同时有腹泻才加分）
+  if (answers.q3_heavy && (answers.q4_stool === '腹泻' || answers.q4_stool === '稀溏')) scores['太阴病'] += 2;
 
   // ========== 少阴病评分（心肾虚衰）==========
-  // 四肢厥冷简化：困倦+畏寒
-  if (answers.q3_heavy && answers.q1_cold) scores['少阴病'] += 3;
-  if (answers.q3_heavy) scores['少阴病'] += 3; // 但欲寐
-  if (answers.q4_stool === '腹泻') scores['少阴病'] += 2; // 下利清谷简化
-  // 面色苍白简化：困倦+畏寒
-  if (answers.q3_heavy && answers.q1_cold) scores['少阴病'] += 2;
-  // 脉微细/沉脉简化：困倦+畏寒
-  if (answers.q3_heavy && answers.q1_cold) scores['少阴病'] += 3;
-  if (answers.q1_cold && !answers.q1_fever) scores['少阴病'] += 2; // 畏寒蜷卧
+  // 四肢厥冷简化：困倦+恶寒（必须同时存在）+3
+  if (answers.q3_heavy && answers.q1_cold && !answers.q1_fever) scores['少阴病'] += 3;
+  // 但欲寐（极度困倦）+3（必须单独存在且明显）
+  if (answers.q3_heavy && !answers.q1_fever && !answers.q1_alternating) scores['少阴病'] += 3;
+  // 下利清谷 +2
+  if (answers.q4_stool === '腹泻' && answers.q3_heavy) scores['少阴病'] += 2;
+  // 脉微细/沉脉简化：困倦+恶寒（无发热）+3
+  if (answers.q3_heavy && answers.q1_cold && !answers.q1_fever) scores['少阴病'] += 3;
+  // 畏寒蜷卧 +2
+  if (answers.q1_cold && !answers.q1_fever && answers.q3_heavy) scores['少阴病'] += 2;
   let isShaoyinCold = false;
   let isShaoyinHeat = false;
-  if (answers.q1_cold && answers.q3_heavy) {
+  if (answers.q1_cold && answers.q3_heavy && !answers.q1_fever) {
     isShaoyinCold = true;
-  } else if (answers.q6_palpitation && answers.q7_tinnitus) {
+  } else if (answers.q6_palpitation && answers.q7_tinnitus && !answers.q1_cold) {
     isShaoyinHeat = true;
   }
 
   // ========== 厥阴病评分（寒热错杂）==========
-  // 四肢厥逆简化：困倦+畏寒
-  if (answers.q3_heavy && answers.q1_cold) scores['厥阴病'] += 3;
-  // 厥热胜复简化：寒热往来
+  // 四肢厥逆简化：困倦+恶寒（必须同时存在）+3
+  if (answers.q3_heavy && answers.q1_cold && !answers.q1_fever) scores['厥阴病'] += 3;
+  // 厥热胜复：寒热往来 +3
   if (answers.q1_alternating) scores['厥阴病'] += 3;
-  if (answers.q5_nausea) scores['厥阴病'] += 2; // 气上撞心/呕逆
-  if (answers.q6_chest_tight) scores['厥阴病'] += 1; // 嘈杂不适
-  if (answers.q4_stool === '腹泻') scores['厥阴病'] += 2; // 下利
-  if (answers.q3_heavy && (answers.q5_appetite === '食欲减退' || answers.q5_appetite === '不想吃东西')) scores['厥阴病'] += 2; // 饥而不欲食
+  // 气上撞心/呕逆 +2
+  if (answers.q5_nausea && answers.q6_chest_tight) scores['厥阴病'] += 2;
+  // 嘈杂不适 +1
+  if (answers.q6_chest_tight && !answers.q6_hypochondrium) scores['厥阴病'] += 1;
+  // 下利 +2
+  if (answers.q4_stool === '腹泻') scores['厥阴病'] += 2;
+  // 饥而不欲食 +2
+  if (answers.q3_heavy && (answers.q5_appetite === '食欲减退' || answers.q5_appetite === '不想吃东西')) scores['厥阴病'] += 2;
   // 寒热错杂加分：同时存在寒证和热证
-  const hasColdSign = answers.q1_cold || answers.q3_heavy;
+  const hasColdSign = answers.q1_cold || (answers.q3_heavy && !answers.q1_fever);
   const hasHeatSign = answers.q1_fever || answers.q2_spontaneous || (answers.q8_thirsty && answers.q8_thirst_level === '大渴引饮');
   if (hasColdSign && hasHeatSign) scores['厥阴病'] += 3;
 
   // 找到得分最高的经
   const maxScore = Math.max(...Object.values(scores));
   const meridian = Object.entries(scores).find(([, score]) => score === maxScore)?.[0] || '太阳病';
+
+  // 检查是否达到阈值
+  const threshold = THRESHOLDS[meridian as keyof typeof THRESHOLDS];
+  if (maxScore < threshold) {
+    // 如果最高分未达到阈值，默认返回太阳病（表证最常见）
+    return {
+      meridian: '太阳病',
+      syndrome: '太阳表虚证',
+      scores,
+      isTableDeficiency: true,
+    };
+  }
 
   // 确定证型
   let syndrome = '';
@@ -254,31 +286,32 @@ function checkInterception(answers: Answers, scores: Record<string, number>): {
 
   // 检查少阴枢机不利
   const shaoyinSigns = [
-    answers.q3_heavy,
-    answers.q4_urine === '尿清长',
-    answers.q1_cold && !answers.q1_fever,
+    answers.q3_heavy && answers.q1_cold && !answers.q1_fever,
+    answers.q4_stool === '腹泻' && answers.q3_heavy,
   ].filter(Boolean).length;
 
   // 西药史阳性
   const hasWesternMedicine = answers.q9_medicine === true;
 
-  // 获取第二高分的经
-  const sortedScores = Object.entries(scores).sort((a, b) => b[1] - a[1]);
-  const secondMeridian = sortedScores[1]?.[0];
+  // 获取当前辨证的经
+  const maxScore = Math.max(...Object.values(scores));
+  const currentMeridian = Object.entries(scores).find(([, score]) => score === maxScore)?.[0] || '太阳病';
 
+  // 少阳为枢：任何经病见少阳枢机不利
   if (shaoyangSigns >= 2 || hasWesternMedicine) {
     return {
       type: '少阳枢',
       reason: hasWesternMedicine ? '正在服用西药，合小柴胡汤调和枢机' : '见少阳枢机不利之象（口苦、胸胁满、寒热往来）',
-      combinedMeridian: secondMeridian,
+      combinedMeridian: currentMeridian,
     };
   }
 
+  // 少阴为枢：任何经病见少阴枢机不利
   if (shaoyinSigns >= 2) {
     return {
       type: '少阴枢',
       reason: '见少阴枢机不利之象（困倦、四肢冷、小便清长）',
-      combinedMeridian: secondMeridian,
+      combinedMeridian: currentMeridian,
     };
   }
 
@@ -294,7 +327,7 @@ function getPrescription(
   isYangmingChannel?: boolean,
   isYangmingFu?: boolean,
   isShaoyinCold?: boolean,
-  isShaoyinHeat?: boolean,
+  isShaoyinHeat?: boolean
 ): {
   prescription: string;
   composition: string;
@@ -306,67 +339,62 @@ function getPrescription(
   contraindications: string;
   notes: string;
 } {
-  // 太阳病
-  if (meridian === '太阳病') {
-    if (isTableExcess) {
-      return {
-        prescription: '麻黄汤',
-        composition: '麻黄、桂枝、杏仁、甘草',
-        dosage: '麻黄9g，桂枝6g，杏仁9g，甘草3g',
-        preparation: '水煎服',
-        usage: '温服，药后覆取微汗',
-        effects: '发汗解表，宣肺平喘',
-        indications: '太阳表实证，恶寒发热，无汗而喘，脉浮紧',
-        contraindications: '表虚自汗者禁用',
-        notes: '温服，药后覆取微汗。忌生冷、油腻、辛辣。注意观察汗出情况，得汗即止，不可过服。儿童减量1/3，老人减量1/4。服药后症状无改善或加重，请及时就医。',
-      };
-    } else {
-      return {
-        prescription: '桂枝汤',
-        composition: '桂枝、白芍、生姜、大枣、甘草',
-        dosage: '桂枝9g，白芍9g，生姜9g，大枣4枚，甘草6g',
-        preparation: '水煎服',
-        usage: '温服，药后啜热粥，取微汗',
-        effects: '解肌发表，调和营卫',
-        indications: '太阳表虚证，发热汗出，恶风，脉浮缓',
-        contraindications: '表实无汗者禁用',
-        notes: '温服，药后啜热粥，取微汗。忌生冷、油腻、辛辣。注意观察汗出情况。儿童减量1/3，老人减量1/4。服药后症状无改善或加重，请及时就医。',
-      };
-    }
-  }
-
-  // 阳明病
-  if (meridian === '阳明病') {
-    if (isYangmingFu) {
-      return {
-        prescription: '大承气汤',
-        composition: '大黄、厚朴、枳实、芒硝',
-        dosage: '大黄12g，厚朴15g，枳实9g，芒硝9g',
-        preparation: '水煎，芒硝溶服',
-        usage: '分二次温服，得下止后服',
-        effects: '峻下热结',
-        indications: '阳明腑实证，潮热谵语，腹满痛便秘，脉沉实',
-        contraindications: '表证未解、阴虚者禁用',
-        notes: '分二次温服，得下止后服。忌生冷、油腻、辛辣。观察二便变化，中病即止，不可过服。儿童减量1/3，老人减量1/4。服药后症状无改善或加重，请及时就医。',
-      };
-    } else {
-      return {
-        prescription: '白虎汤',
-        composition: '石膏、知母、甘草、粳米',
-        dosage: '石膏30g，知母12g，甘草6g，粳米18g',
-        preparation: '水煎，米熟汤成',
-        usage: '温服',
-        effects: '清热生津',
-        indications: '阳明经证，大热大渴大汗，脉洪大',
-        contraindications: '表证未解者禁用',
-        notes: '石膏先煎30分钟。温服。忌生冷、油腻、辛辣。观察寒热变化。儿童减量1/3，老人减量1/4。服药后症状无改善或加重，请及时就医。',
-      };
-    }
-  }
-
-  // 少阳病
-  if (meridian === '少阳病') {
-    return {
+  const prescriptions: Record<string, {
+    prescription: string;
+    composition: string;
+    dosage: string;
+    preparation: string;
+    usage: string;
+    effects: string;
+    indications: string;
+    contraindications: string;
+    notes: string;
+  }> = {
+    '太阳表实证': {
+      prescription: '麻黄汤',
+      composition: '麻黄、桂枝、杏仁、甘草',
+      dosage: '麻黄9g，桂枝6g，杏仁9g，甘草3g',
+      preparation: '水煎服',
+      usage: '温服，药后覆取微汗',
+      effects: '发汗解表，宣肺平喘',
+      indications: '太阳表实证，恶寒发热，无汗而喘，脉浮紧',
+      contraindications: '表虚自汗者禁用',
+      notes: '温服，药后覆取微汗。忌生冷、油腻、辛辣。注意观察汗出情况，得汗即止，不可过服。儿童减量1/3，老人减量1/4。服药后症状无改善或加重，请及时就医。',
+    },
+    '太阳表虚证': {
+      prescription: '桂枝汤',
+      composition: '桂枝、白芍、生姜、大枣、甘草',
+      dosage: '桂枝9g，白芍9g，生姜9g，大枣4枚，甘草6g',
+      preparation: '水煎服',
+      usage: '温服，药后啜热粥，取微汗',
+      effects: '解肌发表，调和营卫',
+      indications: '太阳表虚证，发热汗出，恶风脉浮缓',
+      contraindications: '表实无汗者禁用',
+      notes: '温服，药后啜热粥以助药力。忌生冷、油腻、辛辣。注意观察汗出情况。儿童减量1/3，老人减量1/4。服药后症状无改善或加重，请及时就医。',
+    },
+    '阳明经证': {
+      prescription: '白虎汤',
+      composition: '石膏、知母、甘草、粳米',
+      dosage: '石膏30g，知母12g，甘草6g，粳米18g',
+      preparation: '水煎，米熟汤成',
+      usage: '温服',
+      effects: '清热生津',
+      indications: '阳明经证，大热大渴大汗脉洪大',
+      contraindications: '表证未解者禁用',
+      notes: '石膏先煎30分钟。忌生冷、油腻、辛辣。观察汗出及口渴变化。儿童减量1/3，老人减量1/4。服药后症状无改善或加重，请及时就医。',
+    },
+    '阳明腑实证': {
+      prescription: '大承气汤',
+      composition: '大黄、厚朴、枳实、芒硝',
+      dosage: '大黄12g，厚朴15g，枳实9g，芒硝9g',
+      preparation: '水煎，芒硝溶服',
+      usage: '分二次温服，得下止后服',
+      effects: '峻下热结',
+      indications: '阳明腑实证，潮热谵语，腹满痛便秘，脉沉实',
+      contraindications: '表证未解、阴虚者禁用',
+      notes: '大黄后下，芒硝溶服。忌生冷、油腻、辛辣。观察二便变化，中病即止，不可过服。儿童减量1/3，老人减量1/4。服药后症状无改善或加重，请及时就医。',
+    },
+    '少阳本证': {
       prescription: '小柴胡汤',
       composition: '柴胡、黄芩、人参、半夏、生姜、大枣、甘草',
       dosage: '柴胡24g，黄芩9g，人参9g，半夏9g，生姜9g，大枣4枚，甘草6g',
@@ -376,12 +404,8 @@ function getPrescription(
       indications: '少阳证，寒热往来，胸胁苦满，默默不欲饮食，心烦喜呕，口苦咽干目眩',
       contraindications: '阴虚血少者慎用',
       notes: '去滓再煎，温服。忌生冷、油腻、辛辣。观察寒热变化。儿童减量1/3，老人减量1/4。服药后症状无改善或加重，请及时就医。',
-    };
-  }
-
-  // 太阴病
-  if (meridian === '太阴病') {
-    return {
+    },
+    '太阴虚寒证': {
       prescription: '理中汤',
       composition: '人参、干姜、白术、甘草',
       dosage: '人参9g，干姜9g，白术9g，甘草9g',
@@ -391,158 +415,175 @@ function getPrescription(
       indications: '太阴虚寒证，腹满吐利，食不下，口不渴',
       contraindications: '实热积滞者禁用',
       notes: '温服。忌生冷、油腻、辛辣。观察二便变化。儿童减量1/3，老人减量1/4。服药后症状无改善或加重，请及时就医。',
-    };
-  }
-
-  // 少阴病
-  if (meridian === '少阴病') {
-    if (isShaoyinHeat) {
-      return {
-        prescription: '黄连阿胶汤',
-        composition: '黄连、黄芩、白芍、阿胶、鸡子黄',
-        dosage: '黄连12g，黄芩6g，白芍12g，阿胶9g，鸡子黄2枚',
-        preparation: '水煎，阿胶烊化，鸡子黄搅入',
-        usage: '温服',
-        effects: '滋阴降火，交通心肾',
-        indications: '少阴热化证，心烦不得眠，口燥咽痛',
-        contraindications: '阳虚者禁用',
-        notes: '阿胶烊化，鸡子黄搅入。温服。忌生冷、油腻、辛辣。观察寒热变化。儿童减量1/3，老人减量1/4。服药后症状无改善或加重，请及时就医。',
-      };
-    } else {
-      return {
-        prescription: '四逆汤',
-        composition: '附子、干姜、甘草',
-        dosage: '附子15g，干姜9g，甘草6g',
-        preparation: '水煎服',
-        usage: '温服',
-        effects: '回阳救逆',
-        indications: '少阴寒化证，四肢厥逆，脉微欲绝',
-        contraindications: '热厥、阴虚者禁用',
-        notes: '附子需先煎30分钟至口尝无麻味。温服。忌生冷、油腻、辛辣。观察寒热变化。儿童减量1/3，老人减量1/4。服药后症状无改善或加重，请及时就医。',
-      };
-    }
-  }
-
-  // 厥阴病
-  if (meridian === '厥阴病') {
-    return {
+    },
+    '少阴寒化证': {
+      prescription: '四逆汤',
+      composition: '附子、干姜、甘草',
+      dosage: '附子15g（先煎），干姜9g，甘草6g',
+      preparation: '水煎服',
+      usage: '温服',
+      effects: '回阳救逆',
+      indications: '少阴寒化证，四肢厥逆，脉微欲绝',
+      contraindications: '热厥、阴虚者禁用',
+      notes: '附子必须先煎30分钟以上至口尝无麻味。忌生冷、油腻、辛辣。观察四肢温度及脉搏变化。儿童减量1/3，老人减量1/4。服药后症状无改善或加重，请及时就医。',
+    },
+    '少阴热化证': {
+      prescription: '黄连阿胶汤',
+      composition: '黄连、黄芩、白芍、阿胶、鸡子黄',
+      dosage: '黄连12g，黄芩6g，白芍12g，阿胶9g（烊化），鸡子黄2枚',
+      preparation: '水煎，阿胶烊化，鸡子黄搅入',
+      usage: '温服',
+      effects: '滋阴降火，交通心肾',
+      indications: '少阴热化证，心烦不得眠，口燥咽痛',
+      contraindications: '阳虚者禁用',
+      notes: '阿胶烊化，鸡子黄搅入。忌生冷、油腻、辛辣。观察睡眠及心烦变化。儿童减量1/3，老人减量1/4。服药后症状无改善或加重，请及时就医。',
+    },
+    '厥阴寒热错杂证': {
       prescription: '乌梅丸',
       composition: '乌梅、细辛、干姜、黄连、当归、附子、蜀椒、桂枝、人参、黄柏',
-      dosage: '乌梅30g，细辛3g，干姜9g，黄连12g，当归6g，附子6g，蜀椒6g，桂枝6g，人参6g，黄柏6g',
+      dosage: '乌梅30g，细辛3g，干姜9g，黄连12g，当归6g，附子6g（先煎），蜀椒6g，桂枝6g，人参6g，黄柏6g',
       preparation: '蜜丸或水煎服',
       usage: '日三服',
       effects: '清上温下，寒热并调',
-      indications: '厥阴寒热错杂证，消渴，气上撞心，心中疼热，饥而不欲食',
+      indications: '厥阴寒热错杂证',
       contraindications: '纯热无寒或纯寒无热者不宜',
-      notes: '附子需先煎30分钟。温服。忌生冷、油腻、辛辣。观察寒热变化。儿童减量1/3，老人减量1/4。服药后症状无改善或加重，请及时就医。',
-    };
-  }
-
-  // 默认返回小柴胡汤
-  return {
-    prescription: '小柴胡汤',
-    composition: '柴胡、黄芩、人参、半夏、生姜、大枣、甘草',
-    dosage: '柴胡24g，黄芩9g，人参9g，半夏9g，生姜9g，大枣4枚，甘草6g',
-    preparation: '水煎服',
-    usage: '去滓再煎，温服',
-    effects: '和解少阳',
-    indications: '少阳证',
-    contraindications: '阴虚血少者慎用',
-    notes: '去滓再煎，温服。忌生冷、油腻、辛辣。观察寒热变化。儿童减量1/3，老人减量1/4。服药后症状无改善或加重，请及时就医。',
+      notes: '附子先煎30分钟。忌生冷、油腻、辛辣。观察寒热变化。儿童减量1/3，老人减量1/4。服药后症状无改善或加重，请及时就医。',
+    },
   };
+
+  return prescriptions[syndrome] || prescriptions['太阳表虚证'];
 }
 
-// 开合枢合方
+// 获取合方信息
 function getCombinedPrescription(
-  interceptionType: '少阳枢' | '少阴枢',
-  combinedMeridian: string,
+  currentMeridian: string,
+  interceptionType: '少阳枢' | '少阴枢'
 ): {
   prescription: string;
   composition: string;
   dosage: string;
+  preparation: string;
+  usage: string;
+  effects: string;
+  indications: string;
   notes: string;
 } | null {
-  // 少阳为枢
-  if (interceptionType === '少阳枢') {
-    if (combinedMeridian === '太阳病') {
-      return {
-        prescription: '柴胡桂枝汤',
-        composition: '柴胡、黄芩、人参、半夏、生姜、大枣、甘草、桂枝、白芍',
-        dosage: '柴胡12g，黄芩5g，人参5g，半夏6g，生姜5g，大枣3枚，甘草3g，桂枝5g，白芍5g',
-        notes: '和解少阳，兼以解表。温服。忌生冷、油腻、辛辣。观察寒热变化。',
-      };
-    }
-    if (combinedMeridian === '阳明病') {
-      return {
-        prescription: '大柴胡汤',
-        composition: '柴胡、黄芩、半夏、生姜、大枣、芍药、枳实、大黄',
-        dosage: '柴胡24g，黄芩9g，半夏9g，生姜15g，大枣4枚，芍药9g，枳实9g，大黄6g',
-        notes: '和解少阳，通下里实。分二次温服。忌生冷、油腻、辛辣。观察二便变化。',
-      };
-    }
-    if (combinedMeridian === '太阴病') {
-      return {
-        prescription: '柴胡桂枝干姜汤',
-        composition: '柴胡、桂枝、干姜、瓜蒌根、黄芩、牡蛎、甘草',
-        dosage: '柴胡24g，桂枝9g，干姜6g，瓜蒌根12g，黄芩9g，牡蛎12g，甘草6g',
-        notes: '和解少阳，温中散寒。温服。忌生冷、油腻、辛辣。观察寒热变化。',
-      };
-    }
-    if (combinedMeridian === '少阴病') {
-      return {
-        prescription: '柴胡加龙骨牡蛎汤变方',
-        composition: '柴胡、黄芩、人参、半夏、生姜、大枣、甘草、附子、干姜',
-        dosage: '柴胡12g，黄芩5g，人参5g，半夏6g，生姜5g，大枣3枚，甘草3g，附子6g，干姜5g',
-        notes: '和解少阳，温阳救逆。附子需先煎30分钟。温服。忌生冷、油腻、辛辣。观察寒热变化。',
-      };
-    }
-    if (combinedMeridian === '厥阴病') {
-      return {
-        prescription: '小柴胡汤合乌梅丸化裁',
-        composition: '柴胡、黄芩、人参、半夏、生姜、大枣、甘草、乌梅、黄连',
-        dosage: '柴胡12g，黄芩5g，人参5g，半夏6g，生姜5g，大枣3枚，甘草3g，乌梅15g，黄连3g',
-        notes: '和解少阳，调和寒热。温服。忌生冷、油腻、辛辣。观察寒热变化。',
-      };
-    }
-  }
+  const combinedPrescriptions: Record<string, {
+    prescription: string;
+    composition: string;
+    dosage: string;
+    preparation: string;
+    usage: string;
+    effects: string;
+    indications: string;
+    notes: string;
+  }> = {
+    // 少阳为枢合方
+    '太阳病_少阳枢': {
+      prescription: '柴胡桂枝汤',
+      composition: '柴胡、黄芩、人参、半夏、桂枝、白芍、生姜、大枣、甘草',
+      dosage: '柴胡12g，黄芩6g，人参6g，半夏6g，桂枝6g，白芍6g，生姜6g，大枣3枚，甘草3g',
+      preparation: '水煎服',
+      usage: '温服',
+      effects: '和解少阳，兼以解表',
+      indications: '太阳少阳合病，发热微恶寒，支节烦疼，微呕，心下支结',
+      notes: '温服。忌生冷、油腻、辛辣。观察寒热变化。儿童减量1/3，老人减量1/4。',
+    },
+    '阳明病_少阳枢': {
+      prescription: '大柴胡汤',
+      composition: '柴胡、黄芩、半夏、生姜、大枣、芍药、枳实、大黄',
+      dosage: '柴胡24g，黄芩9g，半夏9g，生姜15g，大枣4枚，芍药9g，枳实9g，大黄6g',
+      preparation: '水煎服',
+      usage: '分二次温服',
+      effects: '和解少阳，通下里实',
+      indications: '少阳阳明合病，呕不止，心下急，郁郁微烦',
+      notes: '大黄后下。忌生冷、油腻、辛辣。观察二便变化。儿童减量1/3，老人减量1/4。',
+    },
+    '太阴病_少阳枢': {
+      prescription: '柴胡桂枝干姜汤',
+      composition: '柴胡、桂枝、干姜、瓜蒌根、黄芩、牡蛎、甘草',
+      dosage: '柴胡24g，桂枝9g，干姜6g，瓜蒌根12g，黄芩9g，牡蛎12g，甘草6g',
+      preparation: '水煎服',
+      usage: '温服',
+      effects: '和解少阳，温中散寒',
+      indications: '少阳太阴合病，胸胁满微结，小便不利，渴而不呕，但头汗出',
+      notes: '温服。忌生冷、油腻、辛辣。观察寒热变化。儿童减量1/3，老人减量1/4。',
+    },
+    '少阴病_少阳枢': {
+      prescription: '柴胡加龙骨牡蛎汤变方',
+      composition: '柴胡、黄芩、人参、半夏、生姜、大枣、甘草、附子、龙骨、牡蛎',
+      dosage: '柴胡12g，黄芩6g，人参6g，半夏6g，生姜6g，大枣3枚，甘草6g，附子6g（先煎），龙骨15g（先煎），牡蛎15g（先煎）',
+      preparation: '水煎服',
+      usage: '温服',
+      effects: '和解少阳，温阳安神',
+      indications: '少阳少阴合病，胸满烦惊，小便不利',
+      notes: '附子、龙骨、牡蛎先煎30分钟。忌生冷、油腻、辛辣。观察神志变化。儿童减量1/3，老人减量1/4。',
+    },
+    '厥阴病_少阳枢': {
+      prescription: '小柴胡汤合乌梅丸化裁',
+      composition: '柴胡、黄芩、人参、半夏、生姜、大枣、甘草、乌梅、黄连、黄柏',
+      dosage: '柴胡12g，黄芩6g，人参6g，半夏6g，生姜6g，大枣3枚，甘草6g，乌梅15g，黄连6g，黄柏6g',
+      preparation: '水煎服',
+      usage: '温服',
+      effects: '和解少阳，清上温下',
+      indications: '少阳厥阴合病，寒热错杂',
+      notes: '温服。忌生冷、油腻、辛辣。观察寒热变化。儿童减量1/3，老人减量1/4。',
+    },
+    // 少阴为枢合方
+    '太阳病_少阴枢': {
+      prescription: '麻黄附子细辛汤',
+      composition: '麻黄、附子、细辛',
+      dosage: '麻黄6g，附子15g（先煎），细辛3g',
+      preparation: '水煎服',
+      usage: '温服',
+      effects: '温经散寒，助阳解表',
+      indications: '太阳少阴合病，发热恶寒，无汗，脉沉',
+      notes: '附子必须先煎30分钟以上。忌生冷、油腻、辛辣。观察汗出及脉搏变化。儿童减量1/3，老人减量1/4。',
+    },
+    '阳明病_少阴枢': {
+      prescription: '白虎汤合四逆汤化裁',
+      composition: '石膏、知母、甘草、粳米、附子、干姜',
+      dosage: '石膏30g（先煎），知母12g，甘草6g，粳米18g，附子6g（先煎），干姜6g',
+      preparation: '水煎服',
+      usage: '温服',
+      effects: '清热生津，回阳救逆',
+      indications: '阳明少阴合病，寒热错杂，危重证',
+      notes: '石膏、附子先煎30分钟。寒热错杂，需密切观察。忌生冷、油腻、辛辣。儿童减量1/3，老人减量1/4。',
+    },
+    '太阴病_少阴枢': {
+      prescription: '附子理中汤',
+      composition: '人参、白术、干姜、附子、甘草',
+      dosage: '人参9g，白术9g，干姜9g，附子15g（先煎），甘草6g',
+      preparation: '水煎服',
+      usage: '温服',
+      effects: '温中健脾，回阳救逆',
+      indications: '太阴少阴合病，腹满吐利，四肢厥冷',
+      notes: '附子必须先煎30分钟以上。忌生冷、油腻、辛辣。观察四肢温度及二便变化。儿童减量1/3，老人减量1/4。',
+    },
+    '少阴病_少阴枢': {
+      prescription: '四逆汤',
+      composition: '附子、干姜、甘草',
+      dosage: '附子15g（先煎），干姜9g，甘草6g',
+      preparation: '水煎服',
+      usage: '温服',
+      effects: '回阳救逆',
+      indications: '少阴病，四肢厥逆，脉微欲绝',
+      notes: '附子必须先煎30分钟以上。忌生冷、油腻、辛辣。观察四肢温度及脉搏变化。儿童减量1/3，老人减量1/4。',
+    },
+    '厥阴病_少阴枢': {
+      prescription: '四逆汤合乌梅丸化裁',
+      composition: '附子、干姜、甘草、乌梅、黄连、黄柏',
+      dosage: '附子15g（先煎），干姜9g，甘草6g，乌梅15g，黄连6g，黄柏6g',
+      preparation: '水煎服',
+      usage: '温服',
+      effects: '回阳救逆，清上温下',
+      indications: '厥阴少阴合病，寒热错杂，四肢厥逆',
+      notes: '附子先煎30分钟。忌生冷、油腻、辛辣。观察寒热及四肢变化。儿童减量1/3，老人减量1/4。',
+    },
+  };
 
-  // 少阴为枢
-  if (interceptionType === '少阴枢') {
-    if (combinedMeridian === '太阳病') {
-      return {
-        prescription: '麻黄附子细辛汤',
-        composition: '麻黄、附子、细辛',
-        dosage: '麻黄6g，附子15g，细辛3g',
-        notes: '温少阴之枢，助太阳之开。附子需先煎30分钟。温服。忌生冷、油腻、辛辣。观察寒热变化。',
-      };
-    }
-    if (combinedMeridian === '阳明病') {
-      return {
-        prescription: '白虎汤合四逆汤化裁',
-        composition: '石膏、知母、甘草、粳米、附子、干姜',
-        dosage: '石膏30g，知母12g，甘草6g，粳米18g，附子9g，干姜6g',
-        notes: '寒热错杂，需密切观察。附子需先煎30分钟。温服。忌生冷、油腻、辛辣。观察寒热变化。',
-      };
-    }
-    if (combinedMeridian === '太阴病') {
-      return {
-        prescription: '附子理中汤',
-        composition: '人参、白术、干姜、附子、甘草',
-        dosage: '人参9g，白术9g，干姜9g，附子15g，甘草6g',
-        notes: '温太阴之枢，温少阴之枢。附子需先煎30分钟。温服。忌生冷、油腻、辛辣。观察寒热变化。',
-      };
-    }
-    if (combinedMeridian === '厥阴病') {
-      return {
-        prescription: '四逆汤合乌梅丸化裁',
-        composition: '附子、干姜、甘草、乌梅、黄连',
-        dosage: '附子15g，干姜9g，甘草6g，乌梅15g，黄连6g',
-        notes: '温少阴之枢，调和寒热。附子需先煎30分钟。温服。忌生冷、油腻、辛辣。观察寒热变化。',
-      };
-    }
-  }
-
-  return null;
+  const key = `${currentMeridian}_${interceptionType}`;
+  return combinedPrescriptions[key] || null;
 }
 
 // 年龄体重调整药量
@@ -588,67 +629,6 @@ function adjustDosage(dosage: string, age: number, weight: number): string {
   return adjusted;
 }
 
-// 获取饮食建议
-function getDietaryAdvice(meridian: string): string[] {
-  const baseAdvice = [
-    '忌生冷寒凉',
-    '忌油腻厚味',
-    '忌辛辣刺激',
-    '宜温热饮食',
-  ];
-
-  if (meridian === '太阳病') {
-    return [...baseAdvice, '可饮生姜红糖水助汗'];
-  }
-  if (meridian === '阳明病') {
-    return [...baseAdvice, '可饮绿豆汤清热', '多食梨、西瓜等清热生津之品'];
-  }
-  if (meridian === '少阳病') {
-    return [...baseAdvice, '宜清淡易消化', '可食萝卜、柑橘理气'];
-  }
-  if (meridian === '太阴病') {
-    return [...baseAdvice, '宜温中健脾', '可食山药、大枣、生姜'];
-  }
-  if (meridian === '少阴病') {
-    return [...baseAdvice, '宜温阳散寒', '可食羊肉、核桃、桂圆'];
-  }
-  if (meridian === '厥阴病') {
-    return [...baseAdvice, '宜调和寒热', '饮食规律，少食多餐'];
-  }
-
-  return baseAdvice;
-}
-
-// 获取生活建议
-function getLifestyleAdvice(meridian: string): string[] {
-  const baseAdvice = [
-    '服药后注意观察汗出、二便、寒热变化',
-    '服药后症状无改善或加重，请及时就医',
-    '儿童减量1/3，老人减量1/4',
-  ];
-
-  if (meridian === '太阳病') {
-    return [...baseAdvice, '药后覆被取微汗', '避免吹风受寒'];
-  }
-  if (meridian === '阳明病') {
-    return [...baseAdvice, '保持室内通风', '多饮温水'];
-  }
-  if (meridian === '少阳病') {
-    return [...baseAdvice, '保持心情舒畅', '避免情绪波动'];
-  }
-  if (meridian === '太阴病') {
-    return [...baseAdvice, '注意腹部保暖', '避免劳累'];
-  }
-  if (meridian === '少阴病') {
-    return [...baseAdvice, '注意保暖，避免受寒', '充分休息'];
-  }
-  if (meridian === '厥阴病') {
-    return [...baseAdvice, '保持情绪稳定', '规律作息'];
-  }
-
-  return baseAdvice;
-}
-
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -689,17 +669,20 @@ export async function POST(request: NextRequest) {
       isYangmingChannel,
       isYangmingFu,
       isShaoyinCold,
-      isShaoyinHeat,
+      isShaoyinHeat
     );
+    
+    // 获取合方（如果有截断）
+    let combinedPrescriptionInfo = null;
+    if (interception.type && interception.combinedMeridian) {
+      combinedPrescriptionInfo = getCombinedPrescription(
+        interception.combinedMeridian,
+        interception.type
+      );
+    }
     
     // 调整药量
     const adjustedDosage = adjustDosage(prescriptionInfo.dosage, age, weight);
-
-    // 获取合方（如果有）
-    let combinedPrescriptionInfo = null;
-    if (interception.type && interception.combinedMeridian) {
-      combinedPrescriptionInfo = getCombinedPrescription(interception.type, interception.combinedMeridian);
-    }
 
     // 构建结果
     const result: DiagnosisResult = {
@@ -720,8 +703,25 @@ export async function POST(request: NextRequest) {
         reason: interception.reason,
         combinedPrescription: combinedPrescriptionInfo?.prescription || (interception.type === '少阳枢' ? '小柴胡汤' : '四逆汤'),
       },
-      dietaryAdvice: getDietaryAdvice(meridian),
-      lifestyleAdvice: getLifestyleAdvice(meridian),
+      dietaryAdvice: [
+        '忌生冷寒凉',
+        '忌油腻厚味',
+        '忌辛辣刺激',
+        '宜温热饮食',
+        ...(meridian === '太阳病' ? ['可饮生姜红糖水助汗'] : []),
+        ...(meridian === '阳明病' ? ['可饮绿豆汤清热', '多食梨、西瓜等清热生津之品'] : []),
+        ...(meridian === '太阴病' ? ['可食山药、大枣健脾', '忌生冷瓜果'] : []),
+        ...(meridian === '少阴病' ? ['宜温补食材', '忌寒凉生冷'] : []),
+      ],
+      lifestyleAdvice: [
+        '服药后注意观察汗出、二便、寒热变化',
+        '服药方法：温服，频服',
+        '年龄体重剂量调整：儿童减量1/3，老人减量1/4',
+        '服药后症状无改善或加重，请及时就医',
+        ...(meridian === '太阳病' ? ['注意避风保暖', '观察汗出情况'] : []),
+        ...(meridian === '阳明病' ? ['观察二便变化', '保持大便通畅'] : []),
+        ...(meridian === '少阴病' ? ['注意保暖', '观察四肢温度'] : []),
+      ],
     };
 
     // 保存到数据库
