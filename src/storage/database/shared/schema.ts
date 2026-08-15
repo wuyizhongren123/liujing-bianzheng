@@ -164,3 +164,22 @@ export const interceptionPrescriptions = pgTable(
 		index("interception_prescriptions_syndrome_id_idx").on(table.syndrome_id),
 	]
 );
+
+// 辨证记录表 - 记录用户问诊和辨证结果
+export const diagnosisRecords = pgTable(
+	"diagnosis_records",
+	{
+		id: serial().primaryKey(),
+		name: varchar("name", { length: 100 }).notNull(), // 姓名
+		age: integer("age").notNull(), // 年龄
+		weight: integer("weight").notNull(), // 体重kg
+		prescription: text("prescription").notNull(), // 推荐方剂
+		meridian: varchar("meridian", { length: 50 }), // 辨证结果（六经）
+		answers: text("answers"), // 十问回答JSON字符串
+		created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+	},
+	(table) => [
+		index("diagnosis_records_name_idx").on(table.name),
+		index("diagnosis_records_created_at_idx").on(table.created_at),
+	]
+);

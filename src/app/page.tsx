@@ -78,6 +78,25 @@ export default function Home() {
           ))}
         </div>
 
+        {/* 开始辨证入口 */}
+        <div className="max-w-xl mx-auto mb-12">
+          <Link
+            href="/consultation/info"
+            className="block bg-gradient-to-r from-red-700 to-red-800 rounded-2xl p-8 shadow-xl hover:shadow-2xl transition-all hover:-translate-y-1 text-center group"
+          >
+            <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-white/30 transition-colors">
+              <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-bold text-white mb-2">开始十问辨证</h2>
+            <p className="text-white/80 text-sm">融合中医十问歌与六经辨证，精准辨证用药</p>
+            <span className="inline-block mt-4 px-6 py-2 bg-white/20 rounded-full text-white text-sm group-hover:bg-white/30 transition-colors">
+              进入问诊 →
+            </span>
+          </Link>
+        </div>
+
         {/* 功能入口 */}
         <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
           <Link

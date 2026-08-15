@@ -1,0 +1,184 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+
+interface Record {
+  id: number;
+  name: string;
+  age: number;
+  weight: number;
+  prescription: string;
+  meridian: string;
+  created_at: string;
+}
+
+export default function AdminPage() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [password, setPassword] = useState('');
+  const [records, setRecords] = useState<Record[]>([]);
+  const [searchName, setSearchName] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const fetchRecords = async (name = '') => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/admin?password=${password}&name=${encodeURIComponent(name)}`);
+      const data = await res.json();
+      if (data.success) {
+        setRecords(data.data.records);
+        setIsAuthenticated(true);
+        setError('');
+      } else {
+        setError(data.error || '获取记录失败');
+      }
+    } catch {
+      setError('网络错误');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    fetchRecords();
+  };
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    fetchRecords(searchName);
+  };
+
+  useEffect(() => {
+    const storedPassword = sessionStorage.getItem('adminPassword');
+    if (storedPassword) {
+      setPassword(storedPassword);
+      setIsAuthenticated(true);
+      fetchRecords();
+    }
+  }, []);
+
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPassword(e.target.value);
+    sessionStorage.setItem('adminPassword', e.target.value);
+  };
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-stone-100 to-stone-200 flex items-center justify-center p-4">
+        <div className="bg-white rounded-xl shadow-xl p-8 w-full max-w-md">
+          <div className="text-center mb-6">
+            <h1 className="text-2xl font-bold text-stone-800">管理后台</h1>
+            <p className="text-stone-500 mt-1">请输入访问密码</p>
+          </div>
+          <form onSubmit={handleLogin} className="space-y-4">
+            <input
+              type="password"
+              value={password}
+              onChange={handlePasswordChange}
+              placeholder="请输入密码"
+              className="w-full px-4 py-3 border border-stone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+            />
+            {error && <p className="text-red-600 text-sm">{error}</p>}
+            <button
+              type="submit"
+              className="w-full py-3 bg-gradient-to-r from-red-700 to-red-800 text-white rounded-lg font-medium hover:from-red-800 hover:to-red-900 transition-all"
+            >
+              登录
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-stone-100 to-stone-200">
+      <div className="bg-white shadow-sm border-b border-stone-200">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <h1 className="text-xl font-bold text-stone-800">问诊记录管理</h1>
+            <button
+              onClick={() => {
+                setIsAuthenticated(false);
+                sessionStorage.removeItem('adminPassword');
+              }}
+              className="text-stone-500 hover:text-stone-700 text-sm"
+            >
+              退出登录
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="container mx-auto px-4 py-6">
+        {/* 搜索栏 */}
+        <form onSubmit={handleSearch} className="mb-6 flex gap-3">
+          <input
+            type="text"
+            value={searchName}
+            onChange={(e) => setSearchName(e.target.value)}
+            placeholder="搜索姓名"
+            className="flex-1 px-4 py-2 border border-stone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+          />
+          <button
+            type="submit"
+            className="px-6 py-2 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-colors"
+          >
+            搜索
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setSearchName('');
+              fetchRecords();
+            }}
+            className="px-6 py-2 bg-stone-200 text-stone-700 rounded-lg hover:bg-stone-300 transition-colors"
+          >
+            重置
+          </button>
+        </form>
+
+        {/* 记录列表 */}
+        {loading ? (
+          <div className="text-center py-12">
+            <p className="text-stone-500">加载中...</p>
+          </div>
+        ) : records.length === 0 ? (
+          <div className="text-center py-12 bg-white rounded-xl shadow">
+            <p className="text-stone-500">暂无记录</p>
+          </div>
+        ) : (
+          <div className="bg-white rounded-xl shadow overflow-hidden">
+            <table className="w-full">
+              <thead className="bg-stone-50 border-b border-stone-200">
+                <tr>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-stone-600">姓名</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-stone-600">年龄</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-stone-600">体重</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-stone-600">病经</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-stone-600">推荐方剂</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-stone-600">提交时间</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-stone-100">
+                {records.map((record) => (
+                  <tr key={record.id} className="hover:bg-stone-50">
+                    <td className="px-4 py-3 text-sm text-stone-800">{record.name}</td>
+                    <td className="px-4 py-3 text-sm text-stone-600">{record.age}岁</td>
+                    <td className="px-4 py-3 text-sm text-stone-600">{record.weight}kg</td>
+                    <td className="px-4 py-3 text-sm text-red-700 font-medium">{record.meridian || '-'}</td>
+                    <td className="px-4 py-3 text-sm text-stone-800">{record.prescription}</td>
+                    <td className="px-4 py-3 text-sm text-stone-500">
+                      {new Date(record.created_at).toLocaleString('zh-CN')}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
