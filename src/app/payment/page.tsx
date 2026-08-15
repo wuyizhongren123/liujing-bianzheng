@@ -3,14 +3,26 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 
 export default function PaymentPage() {
+	const router = useRouter();
 	const [copied, setCopied] = useState(false);
 
 	const handleCopyAmount = () => {
 		navigator.clipboard.writeText('10.00');
 		setCopied(true);
 		setTimeout(() => setCopied(false), 2000);
+	};
+
+	const handlePaymentComplete = () => {
+		// 生成一个唯一的记录ID
+		const recordId = Date.now().toString(36) + Math.random().toString(36).substr(2);
+		// 保存支付状态到sessionStorage
+		sessionStorage.setItem('paymentVerified', 'true');
+		sessionStorage.setItem('paymentRecordId', recordId);
+		// 跳转到推理逻辑展示页面
+		router.push(`/reasoning/${recordId}`);
 	};
 
 	return (
@@ -90,6 +102,17 @@ export default function PaymentPage() {
 									</>
 								)}
 							</button>
+
+							{/* 已完成支付按钮 */}
+							<button
+								onClick={handlePaymentComplete}
+								className="w-full py-4 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white rounded-xl font-bold text-lg shadow-lg transition-all flex items-center justify-center gap-2"
+							>
+								<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+								</svg>
+								已完成支付，查看推理过程
+							</button>
 						</div>
 
 						{/* 温馨提示 */}
@@ -104,7 +127,7 @@ export default function PaymentPage() {
 								<li>• 请确认收款人为「郭中仁」后再付款</li>
 								<li>• 付款时请备注您的姓名</li>
 								<li>• 付款完成后请截图保存凭证</li>
-								<li>• 如有疑问请联系客服</li>
+								<li>• 点击「已完成支付」查看完整辨证推理过程</li>
 							</ul>
 						</div>
 					</div>

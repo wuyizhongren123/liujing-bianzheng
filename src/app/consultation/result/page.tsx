@@ -198,6 +198,29 @@ export default function ResultPage() {
           </p>
         </div>
 
+        {/* 查看推理过程 - 付费 */}
+        <div className="bg-gradient-to-r from-amber-100 to-orange-100 rounded-xl shadow-lg p-5 mb-4 border-2 border-amber-300">
+          <div className="text-center">
+            <h3 className="text-lg font-bold text-amber-900 mb-2">查看完整辨证推理过程</h3>
+            <p className="text-stone-600 text-sm mb-4">
+              了解如何根据您的症状，一步步推导出辨证结论
+            </p>
+            <button
+              onClick={() => {
+                // 保存当前结果到sessionStorage，用于推理页面
+                sessionStorage.setItem('pendingReasoning', JSON.stringify(result));
+                router.push('/payment');
+              }}
+              className="w-full py-4 px-6 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white rounded-xl font-bold text-lg shadow-lg transition-all flex items-center justify-center gap-2"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              查看辨证推理过程 ¥10
+            </button>
+          </div>
+        </div>
+
         {/* 操作按钮 */}
         <div className="flex gap-3">
           <button
