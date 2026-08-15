@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 
-const BOOK_COVER_URL = 'https://coze-coding-project.tos.coze.site/cli_attachment/2026-08-15/4210475031598347_1fcb33dce8bbeacac841a83259f75a64_coze_image_1786728580891.png?sign=1786849270-952071ab4c-0-083db8427ad52da1b9dc191bf65d73d26d89f4dd74e2729d0d66c7fd4f1200ea';
+const BOOK_COVER_URL = '/book-cover.jpg';
 
 export default function Home() {
   const [copied, setCopied] = useState(false);

@@ -818,7 +818,7 @@ export async function POST(request: NextRequest) {
       meridian,
       meridianFull: meridian,
       syndrome,
-      prescription: prescriptionInfo.prescription + (combinedPrescriptionInfo ? ' 合 ' + combinedPrescriptionInfo.prescription : ''),
+      prescription: prescriptionInfo.prescription + (combinedPrescriptionInfo && combinedPrescriptionInfo.prescription !== prescriptionInfo.prescription ? ' 合 ' + combinedPrescriptionInfo.prescription : ''),
       composition: finalComposition,
       dosage: finalDosage,
       preparation: prescriptionInfo.preparation,
