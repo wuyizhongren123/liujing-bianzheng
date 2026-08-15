@@ -176,18 +176,18 @@ function analyzeMeridian(answers: Answers): {
   if (answers.q8_taste === '口苦' && answers.q6_hypochondrium) scores['少阳病'] += 2;
 
   // ========== 太阴病评分（里虚寒）==========
-  // 腹满（单独计算，不与身痛关联）+3
-  if (answers.q6_chest_tight && answers.q4_stool !== '正常' && answers.q4_stool !== '便秘') scores['太阴病'] += 3;
-  // 自利/下利 +3
-  if (answers.q4_stool === '腹泻' || answers.q4_stool === '稀溏') scores['太阴病'] += 3;
+  // 腹满/便溏/腹泻 +3
+  if (answers.q4_stool === '腹泻' || answers.q4_stool === '稀溏' || answers.q4_stool === '便溏') scores['太阴病'] += 3;
   // 呕吐 +2
   if (answers.q5_nausea) scores['太阴病'] += 2;
   // 食不下 +2
   if (answers.q5_appetite === '食欲减退' || answers.q5_appetite === '不想吃东西') scores['太阴病'] += 2;
-  // 口不渴 +2（必须同时有腹泻或呕吐才加分，避免误判）
-  if (!answers.q8_thirsty && (answers.q4_stool === '腹泻' || answers.q4_stool === '稀溏' || answers.q5_nausea)) scores['太阴病'] += 2;
-  // 神疲乏力 +2（必须同时有腹泻才加分）
-  if (answers.q3_heavy && (answers.q4_stool === '腹泻' || answers.q4_stool === '稀溏')) scores['太阴病'] += 2;
+  // 口不渴 +2
+  if (answers.q8_thirsty === false || answers.q8_thirsty === null) scores['太阴病'] += 2;
+  // 身重/神疲乏力 +1
+  if (answers.q3_heavy) scores['太阴病'] += 1;
+  // 脘腹胀满 +1
+  if (answers.q6_chest_tight) scores['太阴病'] += 1;
 
   // ========== 少阴病评分（心肾虚衰）==========
   // 四肢厥冷简化：困倦+恶寒（必须同时存在）+3
@@ -209,26 +209,42 @@ function analyzeMeridian(answers: Answers): {
   }
 
   // ========== 厥阴病评分（寒热错杂）==========
-  // 四肢厥逆简化：困倦+恶寒（必须同时存在）+3
+  // 寒热错杂：同时存在寒证和热证 +3
+  const hasColdSignJueyin = answers.q1_cold || (answers.q3_heavy && !answers.q1_fever);
+  const hasHeatSignJueyin = answers.q1_fever || answers.q2_spontaneous || answers.q1_alternating || (answers.q8_thirsty && answers.q8_thirst_level === '大渴引饮');
+  if (hasColdSignJueyin && hasHeatSignJueyin) scores['厥阴病'] += 3;
+  // 上热下寒：下利+呕吐 +2
+  if ((answers.q4_stool === '腹泻' || answers.q4_stool === '稀溏' || answers.q4_stool === '便溏') && answers.q5_nausea) scores['厥阴病'] += 2;
+  // 胸胁苦满+胸痛 +2
+  if (answers.q6_hypochondrium && answers.q6_chest_pain) scores['厥阴病'] += 2;
+  // 口苦 +1
+  if (answers.q8_taste === '口苦') scores['厥阴病'] += 1;
+  // 四肢厥逆：困倦+恶寒 +3
   if (answers.q3_heavy && answers.q1_cold && !answers.q1_fever) scores['厥阴病'] += 3;
   // 厥热胜复：寒热往来 +3
   if (answers.q1_alternating) scores['厥阴病'] += 3;
-  // 气上撞心/呕逆 +2
-  if (answers.q5_nausea && answers.q6_chest_tight) scores['厥阴病'] += 2;
-  // 嘈杂不适 +1
-  if (answers.q6_chest_tight && !answers.q6_hypochondrium) scores['厥阴病'] += 1;
   // 下利 +2
-  if (answers.q4_stool === '腹泻') scores['厥阴病'] += 2;
+  if (answers.q4_stool === '腹泻' || answers.q4_stool === '稀溏' || answers.q4_stool === '便溏') scores['厥阴病'] += 2;
+  // 呕逆 +2
+  if (answers.q5_nausea) scores['厥阴病'] += 2;
   // 饥而不欲食 +2
-  if (answers.q3_heavy && (answers.q5_appetite === '食欲减退' || answers.q5_appetite === '不想吃东西')) scores['厥阴病'] += 2;
-  // 寒热错杂加分：同时存在寒证和热证
-  const hasColdSign = answers.q1_cold || (answers.q3_heavy && !answers.q1_fever);
-  const hasHeatSign = answers.q1_fever || answers.q2_spontaneous || answers.q1_alternating || (answers.q8_thirsty && answers.q8_thirst_level === '大渴引饮');
-  if (hasColdSign && hasHeatSign) scores['厥阴病'] += 3;
+  if (answers.q5_appetite === '食欲减退' || answers.q5_appetite === '不想吃东西') scores['厥阴病'] += 2;
 
   // 找到得分最高的经
-  const maxScore = Math.max(...Object.values(scores));
-  const meridian = Object.entries(scores).find(([, score]) => score === maxScore)?.[0] || '太阳病';
+  let maxScore = Math.max(...Object.values(scores));
+  let meridian = Object.entries(scores).find(([, score]) => score === maxScore)?.[0] || '太阳病';
+
+  // 特殊逻辑：厥阴与少阳的区分
+  // 当厥阴得分接近少阳（差距<5分）且有寒热错杂+下利特征时，判为厥阴
+  if (meridian === '少阳病' && scores['厥阴病'] > 0 && (maxScore - scores['厥阴病']) < 5) {
+    const hasJueyinFeatures = (hasColdSignJueyin && hasHeatSignJueyin) || 
+                              ((answers.q4_stool === '腹泻' || answers.q4_stool === '稀溏' || answers.q4_stool === '便溏') && answers.q5_nausea);
+    if (hasJueyinFeatures) {
+      meridian = '厥阴病';
+      maxScore = scores['厥阴病'];
+      console.log('[厥阴优先] 厥阴得分:', scores['厥阴病'], '少阳得分:', scores['少阳病'], '差距:', maxScore - scores['厥阴病']);
+    }
+  }
 
   // 调试日志：打印每经得分
   console.log('[辨证评分]', JSON.stringify(scores));
@@ -650,7 +666,7 @@ export async function POST(request: NextRequest) {
       q1_cold: rawAnswers.q1_cold ?? rawAnswers.chills ?? null,
       q1_fever: rawAnswers.q1_fever ?? rawAnswers.fever ?? null,
       q1_alternating: rawAnswers.q1_alternating ?? rawAnswers.alternatingChillsFever ?? null,
-      q1_sweat: rawAnswers.q1_sweat ?? (rawAnswers.sweating === false ? '无汗' : rawAnswers.sweating === true ? '有汗' : null),
+      q1_sweat: rawAnswers.q1_sweat === false || rawAnswers.sweating === false ? '无汗' : rawAnswers.q1_sweat === true || rawAnswers.sweating === true ? '有汗' : (rawAnswers.q1_sweat ?? null),
       
       // 第二问·汗
       q2_spontaneous: rawAnswers.q2_spontaneous ?? rawAnswers.spontaneousSweating ?? null,
