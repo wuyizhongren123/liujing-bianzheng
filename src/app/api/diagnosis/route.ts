@@ -345,6 +345,16 @@ function checkInterception(answers: Answers, scores: Record<string, number>, cur
     };
   }
 
+  // 厥阴病出现少阳症状：厥阴少阳并病
+  if (currentMeridian === '厥阴病' && shaoyangSigns >= 2) {
+    return {
+      type: '少阳枢',
+      reason: `厥阴病（${currentMeridian}）见少阳枢机不利之象，厥阴少阳并病，合小柴胡汤`,
+      combinedMeridian: '厥阴少阳并病',
+      isYangMeridian: false,
+    };
+  }
+
   // 阴经病：必须守少阴+少阳双枢，保证病传阳明而止
   if (isYinMeridian) {
     return {
@@ -580,6 +590,17 @@ function getCombinedPrescription(
       indications: '厥阴病合少阳少阴枢机不利，寒热错杂兼四肢厥逆',
       notes: '附子先煎30分钟。忌生冷、油腻、辛辣。观察寒热及四肢变化。儿童减量1/3，老人减量1/4。',
     },
+    // 厥阴少阳并病合方
+    '厥阴少阳并病_少阳枢': {
+      prescription: '小柴胡汤',
+      composition: '柴胡、黄芩、人参、半夏、甘草',
+      dosage: '柴胡12g，黄芩6g，人参6g，半夏6g，甘草3g',
+      preparation: '水煎服',
+      usage: '温服',
+      effects: '和解少阳',
+      indications: '少阳枢机不利，胸胁苦满、口苦咽干',
+      notes: '忌生冷、油腻、辛辣。观察寒热变化。儿童减量1/3，老人减量1/4。',
+    },
   };
 
   const key = `${currentMeridian}_${interceptionType}`;
@@ -746,25 +767,64 @@ export async function POST(request: NextRequest) {
     // 调整药量
     const adjustedDosage = adjustDosage(prescriptionInfo.dosage, age, weight);
 
-    // 构建结果
     // 构建合方信息（合并到推荐用药中）
     const combinedPrescription = combinedPrescriptionInfo?.prescription || (interception.type === '少阳枢' ? '小柴胡汤' : '四逆汤');
-    const combinedNotes = combinedPrescriptionInfo?.notes || '';
     
-    // 将合方信息合并到 notes 中
-    const fullNotes = prescriptionInfo.notes + (combinedNotes ? `\n\n【枢机截断合方】\n${combinedNotes}` : '');
+    // 将合方药物合并到推荐用药中
+    let finalComposition = prescriptionInfo.composition;
+    let finalDosage = adjustedDosage;
+    let finalEffects = prescriptionInfo.effects;
+    let finalIndications = prescriptionInfo.indications;
+    
+    if (combinedPrescriptionInfo) {
+      // 合并药物组成（去重）
+      const baseHerbs = prescriptionInfo.composition.split('、').map(h => h.trim());
+      const addHerbs = combinedPrescriptionInfo.composition.split('、').map(h => h.trim());
+      const uniqueHerbs = [...new Set([...baseHerbs, ...addHerbs])];
+      finalComposition = uniqueHerbs.join('、');
+      
+      // 合并剂量（去重，保留第一个出现的剂量）
+      const baseDosageParts = prescriptionInfo.dosage.split('，').map(d => d.trim());
+      const addDosageParts = combinedPrescriptionInfo.dosage.split('，').map(d => d.trim());
+      const dosageMap = new Map<string, string>();
+      
+      // 先添加合方的剂量
+      addDosageParts.forEach(part => {
+        const match = part.match(/^(.+?)\d+g/);
+        if (match) {
+          const herbName = match[1].trim();
+          dosageMap.set(herbName, part);
+        }
+      });
+      
+      // 再添加本方的剂量（覆盖合方的）
+      baseDosageParts.forEach(part => {
+        const match = part.match(/^(.+?)\d+g/);
+        if (match) {
+          const herbName = match[1].trim();
+          dosageMap.set(herbName, part);
+        }
+      });
+      
+      finalDosage = Array.from(dosageMap.values()).join('，');
+      
+      // 合并功效
+      finalEffects = prescriptionInfo.effects + '，' + combinedPrescriptionInfo.effects;
+      // 合并主治
+      finalIndications = prescriptionInfo.indications + '；' + combinedPrescriptionInfo.indications;
+    }
 
     const result: DiagnosisResult = {
       meridian,
       meridianFull: meridian,
       syndrome,
-      prescription: prescriptionInfo.prescription,
-      composition: prescriptionInfo.composition,
-      dosage: adjustedDosage,
+      prescription: prescriptionInfo.prescription + (combinedPrescriptionInfo ? ' 合 ' + combinedPrescriptionInfo.prescription : ''),
+      composition: finalComposition,
+      dosage: finalDosage,
       preparation: prescriptionInfo.preparation,
       usage: prescriptionInfo.usage,
-      effects: prescriptionInfo.effects,
-      indications: prescriptionInfo.indications,
+      effects: finalEffects,
+      indications: finalIndications,
       contraindications: "", // 禁忌不显示
       notes: prescriptionInfo.notes, // 不包含截断方注意事项
       interception: {
