@@ -9,8 +9,9 @@ interface DiagnosisResult {
     age: number;
     weight: number;
   };
+  answers?: Record<string, unknown>;
   meridian: string;
-  meridianDetail: string;
+  meridianFull?: string;
   syndrome: string;
   prescription: string;
   composition: string;
@@ -21,11 +22,13 @@ interface DiagnosisResult {
   indications: string;
   contraindications: string;
   notes: string;
-  interception: string | null;
-  interceptionPrescription: string | null;
-  ageAdjustment: string;
-  dietaryAdvice: string;
-  lifestyleAdvice: string;
+  interception?: {
+    type?: string | null;
+    reason?: string;
+    combinedPrescription?: string;
+  } | null;
+  dietaryAdvice?: string[];
+  lifestyleAdvice?: string[];
 }
 
 export default function ResultPage() {
@@ -87,7 +90,7 @@ export default function ResultPage() {
               <span className="text-stone-600 w-20">病经：</span>
               <span className="text-xl font-bold text-red-800">{result.meridian}</span>
             </div>
-            <p className="text-stone-600 text-sm pl-20">{result.meridianDetail}</p>
+            <p className="text-stone-600 text-sm pl-20">{result.meridianFull || ''}</p>
             <div className="flex items-center">
               <span className="text-stone-600 w-20">证型：</span>
               <span className="text-lg font-medium text-stone-800">{result.syndrome}</span>
@@ -96,16 +99,16 @@ export default function ResultPage() {
         </div>
 
         {/* 开合枢截断 */}
-        {result.interception && (
+        {result.interception?.reason && (
           <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-xl shadow-lg p-5 mb-4 border-2 border-purple-200">
             <h2 className="text-lg font-bold text-purple-900 mb-3 flex items-center">
               <span className="w-1 h-5 bg-purple-700 rounded mr-2"></span>
               枢机截断
             </h2>
-            <p className="text-stone-700 mb-2">{result.interception}</p>
-            {result.interceptionPrescription && (
+            <p className="text-stone-700 mb-2">{result.interception.reason}</p>
+            {result.interception.combinedPrescription && (
               <p className="text-stone-600 text-sm">
-                <span className="font-medium">截断方剂：</span>{result.interceptionPrescription}
+                <span className="font-medium">截断方剂：</span>{result.interception.combinedPrescription}
               </p>
             )}
           </div>
@@ -163,11 +166,11 @@ export default function ResultPage() {
           </div>
         </div>
 
-        {/* 年龄体重调整 */}
-        {result.ageAdjustment && (
+        {/* 剂量说明 */}
+        {result.dosage && (
           <div className="bg-amber-50 rounded-xl shadow p-4 mb-4 border border-amber-200">
-            <h3 className="font-bold text-amber-900 mb-2">剂量调整</h3>
-            <p className="text-stone-700 text-sm">{result.ageAdjustment}</p>
+            <h3 className="font-bold text-amber-900 mb-2">剂量说明</h3>
+            <p className="text-stone-700 text-sm">{result.dosage}</p>
           </div>
         )}
 
@@ -178,14 +181,28 @@ export default function ResultPage() {
             调护建议
           </h2>
           <div className="space-y-3">
-            <div>
-              <p className="text-stone-600 text-sm mb-1">饮食建议</p>
-              <p className="text-stone-800">{result.dietaryAdvice}</p>
-            </div>
-            <div>
-              <p className="text-stone-600 text-sm mb-1">起居建议</p>
-              <p className="text-stone-800">{result.lifestyleAdvice}</p>
-            </div>
+            {result.dietaryAdvice && (
+              <div>
+                <p className="text-stone-600 text-sm mb-1">饮食建议</p>
+                <ul className="text-stone-800 list-disc list-inside space-y-1">
+                  {Array.isArray(result.dietaryAdvice) 
+                    ? result.dietaryAdvice.map((item, i) => <li key={i}>{item}</li>)
+                    : <li>{result.dietaryAdvice}</li>
+                  }
+                </ul>
+              </div>
+            )}
+            {result.lifestyleAdvice && (
+              <div>
+                <p className="text-stone-600 text-sm mb-1">起居建议</p>
+                <ul className="text-stone-800 list-disc list-inside space-y-1">
+                  {Array.isArray(result.lifestyleAdvice)
+                    ? result.lifestyleAdvice.map((item, i) => <li key={i}>{item}</li>)
+                    : <li>{result.lifestyleAdvice}</li>
+                  }
+                </ul>
+              </div>
+            )}
           </div>
         </div>
 
@@ -196,6 +213,17 @@ export default function ResultPage() {
             本辨证结果仅供参考，不能替代专业医师的诊断和治疗。
             如有不适，请及时就医。用药请遵医嘱。
           </p>
+        </div>
+
+        {/* 联系方式 */}
+        <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-4 mb-6 border border-green-200">
+          <div className="flex items-center justify-center gap-2">
+            <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M8.691 2.188C3.891 2.188 0 5.476 0 9.53c0 2.212 1.17 4.203 3.002 5.55a.59.59 0 01.213.665l-.39 1.48c-.019.07-.048.141-.048.213 0 .163.13.295.29.295a.326.326 0 00.167-.054l1.903-1.114a.864.864 0 01.717-.098 10.16 10.16 0 002.837.403c.276 0 .543-.027.811-.05-.857-2.578.157-4.972 1.932-6.446 1.703-1.415 3.882-1.98 5.853-1.838-.576-3.583-4.196-6.348-8.596-6.348zM5.785 5.991c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 01-1.162 1.178A1.17 1.17 0 014.623 7.17c0-.651.52-1.18 1.162-1.18zm5.813 0c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 01-1.162 1.178 1.17 1.17 0 01-1.162-1.178c0-.651.52-1.18 1.162-1.18zm5.34 2.867c-1.797-.052-3.746.512-5.28 1.786-1.72 1.428-2.687 3.72-1.78 6.22.944 2.453 3.666 4.229 6.884 4.229.826 0 1.622-.12 2.361-.336a.722.722 0 01.598.082l1.584.926a.272.272 0 00.14.047c.134 0 .24-.111.24-.247 0-.06-.023-.12-.038-.177l-.327-1.233a.582.582 0 01-.023-.156.49.49 0 01.201-.398C23.024 18.48 24 16.82 24 14.98c0-3.21-2.931-5.837-7.062-6.122zm-2.18 2.769c.535 0 .969.44.969.982a.976.976 0 01-.969.983.976.976 0 01-.969-.983c0-.542.434-.982.97-.982zm4.844 0c.535 0 .969.44.969.982a.976.976 0 01-.969.983.976.976 0 01-.969-.983c0-.542.434-.982.969-.982z"/>
+            </svg>
+            <span className="text-stone-700 text-sm">如有疑问，请联系微信：</span>
+            <span className="font-mono font-bold text-green-700">ZRLSGZRLS</span>
+          </div>
         </div>
 
         {/* 查看推理过程 - 付费 */}

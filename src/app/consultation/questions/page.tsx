@@ -132,7 +132,13 @@ export default function QuestionsPage() {
       
       const result = await response.json();
       if (result.success) {
-        sessionStorage.setItem('diagnosisResult', JSON.stringify(result.data));
+        // 将 userInfo 添加到结果中，以便 result 页面使用
+        const resultWithUserInfo = {
+          ...result.data,
+          userInfo: userInfo,
+          answers: answers,
+        };
+        sessionStorage.setItem('diagnosisResult', JSON.stringify(resultWithUserInfo));
         router.push('/consultation/result');
       } else {
         alert('辨证失败，请重试');
