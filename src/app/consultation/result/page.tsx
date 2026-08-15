@@ -66,15 +66,15 @@ export default function ResultPage() {
           <div className="grid grid-cols-3 gap-4 text-center">
             <div>
               <p className="text-stone-500 text-sm">姓名</p>
-              <p className="text-stone-800 font-medium">{result.userInfo.name}</p>
+              <p className="text-stone-800 font-medium">{result.userInfo?.name || '未提供'}</p>
             </div>
             <div>
               <p className="text-stone-500 text-sm">年龄</p>
-              <p className="text-stone-800 font-medium">{result.userInfo.age}岁</p>
+              <p className="text-stone-800 font-medium">{result.userInfo?.age || '未提供'}岁</p>
             </div>
             <div>
               <p className="text-stone-500 text-sm">体重</p>
-              <p className="text-stone-800 font-medium">{result.userInfo.weight}kg</p>
+              <p className="text-stone-800 font-medium">{result.userInfo?.weight || '未提供'}kg</p>
             </div>
           </div>
         </div>
