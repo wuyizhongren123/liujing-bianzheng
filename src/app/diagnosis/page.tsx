@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 
@@ -73,7 +73,7 @@ interface Transmission {
   interception_prescriptions: InterceptionPrescription[];
 }
 
-export default function DiagnosisPage() {
+function DiagnosisContent() {
   const searchParams = useSearchParams();
   const [meridians, setMeridians] = useState<Meridian[]>([]);
   const [selectedMeridian, setSelectedMeridian] = useState<Meridian | null>(null);
@@ -498,5 +498,17 @@ export default function DiagnosisPage() {
         <p className="text-xs mt-1 text-amber-100/50">仅供学习参考，用药请遵医嘱</p>
       </footer>
     </div>
+  );
+}
+
+export default function DiagnosisPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-amber-50 flex items-center justify-center">
+        <div className="text-amber-800 text-lg">加载中...</div>
+      </div>
+    }>
+      <DiagnosisContent />
+    </Suspense>
   );
 }
