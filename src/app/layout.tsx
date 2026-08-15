@@ -4,22 +4,18 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: {
-    default: '新应用 | 扣子编程',
-    template: '%s | 扣子编程',
+    default: '六经辨证用药指导',
+    template: '%s | 六经辨证用药指导',
   },
   description:
-    '扣子编程是一款一站式云端 Vibe Coding 开发平台。通过对话轻松构建智能体、工作流和网站，实现从创意到上线的无缝衔接。',
+    '基于《伤寒论》六经辨证体系的中医用药指导应用，提供太阳、阳明、少阳、太阴、少阴、厥阴六经辨证的证型分析与方剂推荐。',
   keywords: [
-    '扣子编程',
-    'Coze Code',
-    'Vibe Coding',
-    'AI 编程',
-    '智能体搭建',
-    '工作流搭建',
-    '网站搭建',
-    '网站部署',
-    '全栈开发',
-    'AI 工程师',
+    '六经辨证',
+    '伤寒论',
+    '中医',
+    '用药指导',
+    '方剂',
+    '郭中仁',
   ],
   authors: [{ name: 'Coze Code Team', url: 'https://code.coze.cn' }],
   generator: 'Coze Code',

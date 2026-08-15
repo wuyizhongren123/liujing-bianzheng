@@ -1,65 +1,117 @@
-# 项目上下文
+# 六经辨证用药指导 - 项目说明
 
-### 版本技术栈
+## 项目概述
+
+基于《伤寒论》六经辨证体系的中医用药指导Web应用，提供太阳、阳明、少阳、太阴、少阴、厥阴六经辨证的证型分析与方剂推荐。
+
+## 技术栈
 
 - **Framework**: Next.js 16 (App Router)
 - **Core**: React 19
 - **Language**: TypeScript 5
-- **UI 组件**: shadcn/ui (基于 Radix UI)
-- **Styling**: Tailwind CSS 4
+- **UI**: Tailwind CSS 4
+- **Database**: Supabase PostgreSQL
+- **部署**: Vercel
 
 ## 目录结构
 
 ```
-├── public/                 # 静态资源
-├── scripts/                # 构建与启动脚本
-│   ├── build.sh            # 构建脚本
-│   ├── dev.sh              # 开发环境启动脚本
-│   ├── prepare.sh          # 预处理脚本
-│   └── start.sh            # 生产环境启动脚本
 ├── src/
-│   ├── app/                # 页面路由与布局
-│   ├── components/ui/      # Shadcn UI 组件库
-│   ├── hooks/              # 自定义 Hooks
-│   ├── lib/                # 工具库
-│   │   └── utils.ts        # 通用工具函数 (cn)
-│   └── server.ts           # 自定义服务端入口
-├── next.config.ts          # Next.js 配置
-├── package.json            # 项目依赖管理
-└── tsconfig.json           # TypeScript 配置
+│   ├── app/
+│   │   ├── api/                    # API路由
+│   │   │   ├── meridians/          # 六经数据接口
+│   │   │   │   ├── route.ts        # GET /api/meridians
+│   │   │   │   └── [id]/syndromes/ # GET /api/meridians/[id]/syndromes
+│   │   │   ├── syndromes/          # 证型数据接口
+│   │   │   │   └── [id]/prescriptions/ # GET /api/syndromes/[id]/prescriptions
+│   │   │   ├── prescriptions/      # 方剂数据接口
+│   │   │   │   └── route.ts        # GET /api/prescriptions
+│   │   │   └── herbs/              # 药材数据接口
+│   │   │       └── route.ts        # GET /api/herbs
+│   │   ├── diagnosis/              # 辨证论治页面
+│   │   ├── prescriptions/          # 方剂查询页面
+│   │   ├── herbs/                  # 药材百科页面
+│   │   └── page.tsx                # 首页
+│   └── storage/database/           # 数据库相关
+│       └── shared/schema.ts        # 数据库表结构定义
 ```
 
-- 项目文件（如 app 目录、pages 目录、components 等）默认初始化到 `src/` 目录下。
+## 功能模块
 
-## 包管理规范
+### 1. 首页
+- 展示书籍封面和作者信息（郭中仁）
+- 六经概览卡片，快速导航到各经辨证
+- 功能入口：辨证论治、方剂查询、药材百科
 
-**仅允许使用 pnpm** 作为包管理器，**严禁使用 npm 或 yarn**。
-**常用命令**：
-- 安装依赖：`pnpm add <package>`
-- 安装开发依赖：`pnpm add -D <package>`
-- 安装所有依赖：`pnpm install`
-- 移除依赖：`pnpm remove <package>`
+### 2. 辨证论治 (/diagnosis)
+- 选择六经（太阳、阳明、少阳、太阴、少阴、厥阴）
+- 查看经络详情（概述、病机、主要症状）
+- 选择证型，查看证型详情（症状、舌象、脉象、病机、治法）
+- 获取推荐方剂（组成、用量、制法、用法、功效、主治、禁忌）
 
-## 开发规范
+### 3. 方剂查询 (/prescriptions)
+- 浏览所有方剂
+- 支持搜索（名称、组成、功效、主治）
 
-### 编码规范
+### 4. 药材百科 (/herbs)
+- 浏览所有药材
+- 支持搜索（名称、拼音、功效、主治）
+- 支持按分类筛选
 
-- 默认按 TypeScript `strict` 心智写代码；优先复用当前作用域已声明的变量、函数、类型和导入，禁止引用未声明标识符或拼错变量名。
-- 禁止隐式 `any` 和 `as any`；函数参数、返回值、解构项、事件对象、`catch` 错误在使用前应有明确类型或先完成类型收窄，并清理未使用的变量和导入。
+## API接口
 
-### next.config 配置规范
+| 接口 | 方法 | 说明 |
+|------|------|------|
+| `/api/meridians` | GET | 获取六经列表 |
+| `/api/meridians/[id]/syndromes` | GET | 获取某经的证型列表 |
+| `/api/syndromes/[id]/prescriptions` | GET | 获取某证型的方剂列表 |
+| `/api/prescriptions` | GET | 获取所有方剂 |
+| `/api/herbs` | GET | 获取所有药材 |
 
-- 配置的路径不要写死绝对路径，必须使用 path.resolve(__dirname, ...)、import.meta.dirname 或 process.cwd() 动态拼接。
+## 数据库设计
 
-### Hydration 问题防范
+### 表结构
 
-1. 严禁在 JSX 渲染逻辑中直接使用 typeof window、Date.now()、Math.random() 等动态数据。**必须使用 'use client' 并配合 useEffect + useState 确保动态内容仅在客户端挂载后渲染**；同时严禁非法 HTML 嵌套（如 <p> 嵌套 <div>）。
-2. **禁止使用 head 标签**，优先使用 metadata，详见文档：https://nextjs.org/docs/app/api-reference/functions/generate-metadata
-   1. 三方 CSS、字体等资源可在 `globals.css` 中顶部通过 `@import` 引入或使用 next/font
-   2. preload, preconnect, dns-prefetch 通过 ReactDOM 的 preload、preconnect、dns-prefetch 方法引入
-   3. json-ld 可阅读 https://nextjs.org/docs/app/guides/json-ld
+1. **six_meridians** - 六经表
+   - id, name, description, pathogenesis, main_symptoms, sort_order
 
-## UI 设计与组件规范 (UI & Styling Standards)
+2. **syndromes** - 证型表
+   - id, meridian_id, name, description, symptoms, tongue_presentation, pulse_presentation, pathogenesis, treatment_principle, sort_order
 
-- 模板默认预装核心组件库 `shadcn/ui`，位于`src/components/ui/`目录下
-- Next.js 项目**必须默认**采用 shadcn/ui 组件、风格和规范，**除非用户指定用其他的组件和规范。**
+3. **prescriptions** - 方剂表
+   - id, syndrome_id, name, composition, dosage, preparation, usage, effects, indications, contraindications, notes, sort_order
+
+4. **herbs** - 药材表
+   - id, name, pinyin_name, category, properties, effects, indications, dosage, contraindications, notes
+
+5. **prescription_herbs** - 方剂药材关联表
+   - id, prescription_id, herb_id, dosage, preparation, sort_order
+
+### 初始数据
+
+- 六经：太阳病、阳明病、少阳病、太阴病、少阴病、厥阴病
+- 证型：16个证型（每经2-4个）
+- 方剂：16个经典方剂（桂枝汤、麻黄汤、小柴胡汤、白虎汤等）
+- 药材：20味常用中药
+
+## 开发命令
+
+```bash
+# 安装依赖
+pnpm install
+
+# 开发模式
+pnpm dev
+
+# 构建
+pnpm build
+
+# 启动
+pnpm start
+```
+
+## 注意事项
+
+1. 本应用仅供学习参考，实际用药请遵医嘱
+2. 数据来源于《伤寒论》经典理论
+3. 使用Supabase PostgreSQL存储数据，支持长期稳定运行
