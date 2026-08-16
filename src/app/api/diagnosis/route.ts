@@ -967,7 +967,7 @@ export async function POST(request: NextRequest) {
     if (isFemale && (menstrual_cycle || menstrual_flow || menstrual_pain)) {
       const parts = [];
       if (menstrual_cycle && menstrual_cycle !== '正常') parts.push(`周期${menstrual_cycle}`);
-      if (menstrual_flow && menstrual_flow !== '正常') parts.push(`量${menstrual_flow}`);
+      if (menstrual_flow && menstrual_flow !== '正常') parts.push(menstrual_flow);
       if (menstrual_pain === '有痛经') parts.push('痛经');
       if (parts.length > 0) {
         menstrualInfo = parts.join('、');
