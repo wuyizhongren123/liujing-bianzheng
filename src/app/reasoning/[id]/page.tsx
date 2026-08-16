@@ -210,16 +210,41 @@ export default function ReasoningPage() {
 		});
 
 		// 第五步：开合枢截断分析
+		const kaiheShuTheory = `【开阖枢理论】
+"舍枢，不能开阖；舍开阖，不能转枢" ——《灵枢·根结》
+
+枢＝门轴；开＝把门打开；阖＝把门关 上。
+
+用大门做比喻：
+• 枢，就是大门的转轴。开是开门，阖是关门。
+• 舍枢，不能开阖：离开了门轴（枢），门就没办法实现开门、关门的动作。
+• 舍开阖，不能转枢：如果门本身没有开合的功能，门轴也就失去转动的意义。
+
+六经对应：
+• 少阳是阳门的门轴（阳枢），少阴是阴门的门轴（阴枢）。
+• 没有少阳枢机，太阳就没法"开"（阳气向外布散卫表），阳明也没法"阖"（阳气向内收敛入腑）。
+• 没有少阴枢机，太阴就没法"开"（布散阴精），厥阴也没法"阖"（收纳阴血）。
+
+枢管转换，开阖管出入。没有转轴就打不开门关不上；没有开门关门，转轴也没必要转动。二者互相依存，缺一不可。
+
+武医思路：站桩调的就是这一套气化，形体中正，枢机才能转，一身阴阳才能正常开阖。`;
+
 		if (result.interception && result.interception.type) {
 			steps.push({
 				title: '第五步：开合枢截断分析',
-				content: `根据开合枢理论，${result.interception.reason}，建议合用「${result.interception.combinedPrescription}」进行截断。`,
+				content: `${kaiheShuTheory}
+
+【本案分析】
+根据开合枢理论，${result.interception.reason}，建议合用「${result.interception.combinedPrescription}」进行截断。`,
 				highlight: true
 			});
 		} else {
 			steps.push({
 				title: '第五步：开合枢截断分析',
-				content: '根据开合枢理论，当前症状未见明显的传变趋势，暂无需合方截断。'
+				content: `${kaiheShuTheory}
+
+【本案分析】
+根据开合枢理论，当前症状未见明显的传变趋势，暂无需合方截断。`
 			});
 		}
 
