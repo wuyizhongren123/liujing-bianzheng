@@ -10,6 +10,7 @@ interface UserInfo {
   gender: '男' | '女';
   menstrual_cycle?: string | null;
   menstrual_flow?: string | null;
+  menstrual_pain?: string | null;
 }
 
 interface Answers {

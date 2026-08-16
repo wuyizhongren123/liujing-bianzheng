@@ -13,6 +13,7 @@ export default function UserInfoPage() {
     // 月经相关（仅女性显示）
     menstrual_cycle: '' as '' | '正常' | '提前' | '推后' | '不定期',
     menstrual_flow: '' as '' | '正常' | '量多' | '量少',
+    menstrual_pain: '' as '' | '无痛经' | '有痛经',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -47,6 +48,9 @@ export default function UserInfoPage() {
       if (!formData.menstrual_flow) {
         newErrors.menstrual_flow = '请选择月经量';
       }
+      if (!formData.menstrual_pain) {
+        newErrors.menstrual_pain = '请选择是否有痛经';
+      }
     }
     
     setErrors(newErrors);
@@ -67,6 +71,7 @@ export default function UserInfoPage() {
         // 仅女性且生育期才传月经信息
         menstrual_cycle: (isFemale && age >= 12 && age <= 55) ? formData.menstrual_cycle : null,
         menstrual_flow: (isFemale && age >= 12 && age <= 55) ? formData.menstrual_flow : null,
+        menstrual_pain: (isFemale && age >= 12 && age <= 55) ? formData.menstrual_pain : null,
       }));
       
       // 跳转到问诊页面
@@ -253,6 +258,40 @@ export default function UserInfoPage() {
                   </div>
                   {errors.menstrual_flow && (
                     <p className="text-red-600 text-sm mt-1">{errors.menstrual_flow}</p>
+                  )}
+                </div>
+
+                {/* 是否痛经 */}
+                <div>
+                  <label className="block text-stone-700 font-medium mb-2">
+                    是否痛经 <span className="text-red-600">*</span>
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, menstrual_pain: '无痛经' })}
+                      className={`py-2 px-3 rounded-lg border-2 text-sm font-medium transition-all ${
+                        formData.menstrual_pain === '无痛经'
+                          ? 'border-pink-500 bg-pink-50 text-pink-700'
+                          : 'border-amber-200 text-stone-600 hover:border-amber-400'
+                      }`}
+                    >
+                      无痛经
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, menstrual_pain: '有痛经' })}
+                      className={`py-2 px-3 rounded-lg border-2 text-sm font-medium transition-all ${
+                        formData.menstrual_pain === '有痛经'
+                          ? 'border-pink-500 bg-pink-50 text-pink-700'
+                          : 'border-amber-200 text-stone-600 hover:border-amber-400'
+                      }`}
+                    >
+                      有痛经
+                    </button>
+                  </div>
+                  {errors.menstrual_pain && (
+                    <p className="text-red-600 text-sm mt-1">{errors.menstrual_pain}</p>
                   )}
                 </div>
               </div>

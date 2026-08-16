@@ -662,6 +662,7 @@ export async function POST(request: NextRequest) {
     const gender = userInfo.gender || null;
     const menstrual_cycle = userInfo.menstrual_cycle || null;
     const menstrual_flow = userInfo.menstrual_flow || null;
+    const menstrual_pain = userInfo.menstrual_pain || null;
     
     // 字段映射：支持新格式（chills, fever等）和旧格式（q1_cold, q1_fever等）
     const rawAnswers = body.answers || {};
@@ -868,7 +869,8 @@ export async function POST(request: NextRequest) {
     const isFemale = gender === '女';
     const hasMenstrualIssue = isFemale && (
       menstrual_cycle === '提前' || menstrual_cycle === '推后' || menstrual_cycle === '不定期' ||
-      menstrual_flow === '量多' || menstrual_flow === '量少'
+      menstrual_flow === '量多' || menstrual_flow === '量少' ||
+      menstrual_pain === '有痛经'
     );
     let gynecologyNote = '';
     if (hasMenstrualIssue) {
@@ -885,7 +887,8 @@ export async function POST(request: NextRequest) {
       // 构建妇科说明
       const cycleDesc = menstrual_cycle && menstrual_cycle !== '正常' ? `月经周期${menstrual_cycle}` : '';
       const flowDesc = menstrual_flow && menstrual_flow !== '正常' ? `月经量${menstrual_flow}` : '';
-      const menstrualDesc = [cycleDesc, flowDesc].filter(Boolean).join('，');
+      const painDesc = menstrual_pain === '有痛经' ? '痛经' : '';
+      const menstrualDesc = [cycleDesc, flowDesc, painDesc].filter(Boolean).join('、');
       gynecologyNote = `患者为女性，兼有${menstrualDesc}，合温经汤温经散寒、养血调经。`;
       
       console.log('[妇科] 女性患者，月经异常:', menstrualDesc, '合温经汤');
