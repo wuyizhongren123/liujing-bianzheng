@@ -961,6 +961,7 @@ export async function POST(request: NextRequest) {
 
     // 保存到数据库
     const supabase = getSupabaseClient();
+    console.log('准备保存记录:', { name, age, weight, gender, meridian });
     
     // 构建月经信息字符串
     let menstrualInfo = null;
@@ -974,7 +975,7 @@ export async function POST(request: NextRequest) {
       }
     }
     
-    const { error } = await supabase
+    const { data: insertData, error } = await supabase
       .from('diagnosis_records')
       .insert({
         name,
@@ -986,10 +987,13 @@ export async function POST(request: NextRequest) {
         final_prescription: result.prescription,
         meridian,
         answers: JSON.stringify(answers),
-      });
+      })
+      .select();
 
     if (error) {
       console.error('保存记录失败:', error);
+    } else {
+      console.log('保存记录成功:', insertData);
     }
 
     return NextResponse.json({ success: true, data: result });
