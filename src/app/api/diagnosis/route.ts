@@ -1,1004 +1,445 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
 
-// 十问回答接口
+const supabase = getSupabaseClient();
+
+interface UserInfo {
+  name: string;
+  age: number;
+  weight: number;
+  gender?: string;
+  menstrual_cycle?: string;
+  menstrual_flow?: string;
+  menstrual_pain?: string;
+}
+
 interface Answers {
-  // 第一问·寒热
-  q1_cold: boolean | null; // 恶寒
-  q1_fever: boolean | null; // 发热
-  q1_alternating: boolean | null; // 寒热往来
-  q1_sweat: '有汗' | '无汗' | '未发热' | null; // 出汗情况
-  
-  // 第二问·汗
-  q2_spontaneous: boolean | null; // 自汗
-  q2_night: boolean | null; // 盗汗
-  q2_location: string | null; // 出汗部位
-  
-  // 第三问·头身
-  q3_headache: boolean | null; // 头痛
-  q3_head_location: string | null; // 头痛部位
-  q3_body_pain: boolean | null; // 身痛
-  q3_body_location: string | null; // 身痛部位
-  q3_heavy: boolean | null; // 沉重困倦
-  
-  // 第四问·便
-  q4_stool: string | null; // 大便情况
-  q4_urine: string | null; // 小便情况
-  
-  // 第五问·饮食
-  q5_appetite: string | null; // 食欲
-  q5_nausea: boolean | null; // 恶心呕吐
-  
-  // 第六问·胸
-  q6_chest_tight: boolean | null; // 胸闷
-  q6_chest_pain: boolean | null; // 胸痛
-  q6_hypochondrium: boolean | null; // 胸胁胀满
-  q6_palpitation: boolean | null; // 心悸
-  
-  // 第七问·聋
-  q7_tinnitus: boolean | null; // 耳鸣
-  q7_hearing: boolean | null; // 听力下降
-  
-  // 第八问·渴
-  q8_thirsty: boolean | null; // 口渴
-  q8_thirst_level: string | null; // 口渴程度
-  q8_drink_pref: string | null; // 喜冷喜热
-  q8_taste: string | null; // 口味
-  
-  // 第九问·旧病
-  q9_chronic: boolean | null;
-  q9_chronic_desc: string;
-  q9_medicine: boolean | null;
-  q9_medicine_desc: string;
-  q9_skin: boolean | null;
-  q9_skin_desc: string;
-  q9_pain: boolean | null;
-  q9_pain_desc: string;
-  
-  // 第十问·因
-  q10_duration: string | null;
-  q10_cause: string | null;
-}
-
-// 辨证结果接口
-interface DiagnosisResult {
-  meridian: string;
-  meridianFull: string;
-  syndrome: string;
-  prescription: string;
-  composition: string;
-  dosage: string;
-  preparation: string;
-  usage: string;
-  effects: string;
-  indications: string;
-  contraindications: string;
-  notes: string;
-  interception: {
-    type: '少阳枢' | '少阴枢' | '阴阳双枢' | null;
-    reason: string;
-    combinedPrescription: string;
-  };
-  dietaryAdvice: string[];
-  lifestyleAdvice: string[];
-}
-
-// 六经评分阈值
-const THRESHOLDS = {
-  '太阳病': 8,
-  '阳明病': 10,
-  '少阳病': 10,
-  '太阴病': 8,
-  '少阴病': 8,
-  '厥阴病': 8,
-};
-
-// 六经辨证评分函数
-function analyzeMeridian(answers: Answers): { 
-  meridian: string; 
-  syndrome: string; 
-  scores: Record<string, number>;
-  isTableExcess?: boolean;
-  isTableDeficiency?: boolean;
-  isYangmingChannel?: boolean;
-  isYangmingFu?: boolean;
-  isShaoyinCold?: boolean;
-  isShaoyinHeat?: boolean;
-} {
-  const scores: Record<string, number> = {
-    '太阳病': 0,
-    '阳明病': 0,
-    '少阳病': 0,
-    '太阴病': 0,
-    '少阴病': 0,
-    '厥阴病': 0,
-  };
-
-  // ========== 太阳病评分（表证）==========
-  // 恶寒 +3
-  if (answers.q1_cold) scores['太阳病'] += 3;
-  // 发热 +2
-  if (answers.q1_fever) scores['太阳病'] += 2;
-  // 头痛 +2
-  if (answers.q3_headache) scores['太阳病'] += 2;
-  // 身痛 +2
-  if (answers.q3_body_pain) scores['太阳病'] += 2;
-  // 浮脉简化：恶寒+发热同时存在 +3
-  if (answers.q1_cold && answers.q1_fever) scores['太阳病'] += 3;
-  // 无汗（表实）+2，有汗（表虚）+1
-  let isTableExcess = false;
-  let isTableDeficiency = false;
-  if (answers.q1_sweat === '无汗') {
-    scores['太阳病'] += 2;
-    isTableExcess = true;
-  } else if (answers.q1_sweat === '有汗') {
-    scores['太阳病'] += 1;
-    isTableDeficiency = true;
-  }
-
-  // ========== 阳明病评分（里热证）==========
-  // 高热（发热且不恶寒）+3
-  if (answers.q1_fever && !answers.q1_cold) scores['阳明病'] += 3;
-  // 大汗 +3
-  if (answers.q2_spontaneous) scores['阳明病'] += 3;
-  // 大渴引饮 +3
-  if (answers.q8_thirsty && answers.q8_thirst_level === '大渴引饮') scores['阳明病'] += 3;
-  // 便秘 +2
-  if (answers.q4_stool === '便秘') scores['阳明病'] += 2;
-  // 腹满痛（身痛+便秘）+2
-  if (answers.q3_body_pain && answers.q4_stool === '便秘') scores['阳明病'] += 2;
-  // 尿黄赤 +2
-  if (answers.q4_urine === '尿黄短少') scores['阳明病'] += 2;
-  // 洪大脉简化：高热+大汗 +3
-  if (answers.q1_fever && !answers.q1_cold && answers.q2_spontaneous) scores['阳明病'] += 3;
-  let isYangmingChannel = false;
-  let isYangmingFu = false;
-  if (answers.q4_stool === '便秘') {
-    isYangmingFu = true;
-  } else if (answers.q1_fever && answers.q8_thirsty) {
-    isYangmingChannel = true;
-  }
-
-  // ========== 少阳病评分（半表半里）==========
-  // 口苦 +3
-  if (answers.q8_taste === '口苦') scores['少阳病'] += 3;
-  // 目眩简化：耳鸣 +2
-  if (answers.q7_tinnitus) scores['少阳病'] += 2;
-  // 胸胁苦满 +3
-  if (answers.q6_hypochondrium) scores['少阳病'] += 3;
-  // 心烦喜呕 +3
-  if (answers.q5_nausea) scores['少阳病'] += 3;
-  // 寒热往来 +3
-  if (answers.q1_alternating) scores['少阳病'] += 3;
-  // 默默不欲饮食 +2
-  if (answers.q5_appetite === '食欲减退' || answers.q5_appetite === '不想吃东西') scores['少阳病'] += 2;
-  // 弦脉简化：口苦+胸胁满 +2
-  if (answers.q8_taste === '口苦' && answers.q6_hypochondrium) scores['少阳病'] += 2;
-
-  // ========== 太阴病评分（里虚寒）==========
-  // 腹满/便溏/腹泻 +3
-  if (answers.q4_stool === '腹泻' || answers.q4_stool === '稀溏' || answers.q4_stool === '便溏') scores['太阴病'] += 3;
-  // 呕吐 +2
-  if (answers.q5_nausea) scores['太阴病'] += 2;
-  // 食不下 +2
-  if (answers.q5_appetite === '食欲减退' || answers.q5_appetite === '不想吃东西') scores['太阴病'] += 2;
-  // 口不渴 +2
-  if (answers.q8_thirsty === false || answers.q8_thirsty === null) scores['太阴病'] += 2;
-  // 身重/神疲乏力 +1
-  if (answers.q3_heavy) scores['太阴病'] += 1;
-  // 脘腹胀满 +1
-  if (answers.q6_chest_tight) scores['太阴病'] += 1;
-
-  // ========== 少阴病评分（心肾虚衰）==========
-  // 四肢厥冷简化：困倦+恶寒（必须同时存在）+3
-  if (answers.q3_heavy && answers.q1_cold && !answers.q1_fever) scores['少阴病'] += 3;
-  // 但欲寐（极度困倦）+3（必须单独存在且明显）
-  if (answers.q3_heavy && !answers.q1_fever && !answers.q1_alternating) scores['少阴病'] += 3;
-  // 下利清谷 +2
-  if (answers.q4_stool === '腹泻' && answers.q3_heavy) scores['少阴病'] += 2;
-  // 脉微细/沉脉简化：困倦+恶寒（无发热）+3
-  if (answers.q3_heavy && answers.q1_cold && !answers.q1_fever) scores['少阴病'] += 3;
-  // 畏寒蜷卧 +2
-  if (answers.q1_cold && !answers.q1_fever && answers.q3_heavy) scores['少阴病'] += 2;
-  let isShaoyinCold = false;
-  let isShaoyinHeat = false;
-  if (answers.q1_cold && answers.q3_heavy && !answers.q1_fever) {
-    isShaoyinCold = true;
-  } else if (answers.q6_palpitation && answers.q7_tinnitus && !answers.q1_cold) {
-    isShaoyinHeat = true;
-  }
-
-  // ========== 厥阴病评分（寒热错杂）==========
-  // 寒热错杂：同时存在寒证和热证 +3
-  const hasColdSignJueyin = answers.q1_cold || (answers.q3_heavy && !answers.q1_fever);
-  const hasHeatSignJueyin = answers.q1_fever || answers.q2_spontaneous || answers.q1_alternating || (answers.q8_thirsty && answers.q8_thirst_level === '大渴引饮');
-  if (hasColdSignJueyin && hasHeatSignJueyin) scores['厥阴病'] += 3;
-  // 上热下寒：下利+呕吐 +2
-  if ((answers.q4_stool === '腹泻' || answers.q4_stool === '稀溏' || answers.q4_stool === '便溏') && answers.q5_nausea) scores['厥阴病'] += 2;
-  // 胸胁苦满+胸痛 +2
-  if (answers.q6_hypochondrium && answers.q6_chest_pain) scores['厥阴病'] += 2;
-  // 口苦 +1
-  if (answers.q8_taste === '口苦') scores['厥阴病'] += 1;
-  // 四肢厥逆：困倦+恶寒 +3
-  if (answers.q3_heavy && answers.q1_cold && !answers.q1_fever) scores['厥阴病'] += 3;
-  // 厥热胜复：寒热往来 +3
-  if (answers.q1_alternating) scores['厥阴病'] += 3;
-  // 下利 +2
-  if (answers.q4_stool === '腹泻' || answers.q4_stool === '稀溏' || answers.q4_stool === '便溏') scores['厥阴病'] += 2;
-  // 呕逆 +2
-  if (answers.q5_nausea) scores['厥阴病'] += 2;
-  // 饥而不欲食 +2
-  if (answers.q5_appetite === '食欲减退' || answers.q5_appetite === '不想吃东西') scores['厥阴病'] += 2;
-
-  // 找到得分最高的经
-  let maxScore = Math.max(...Object.values(scores));
-  let meridian = Object.entries(scores).find(([, score]) => score === maxScore)?.[0] || '太阳病';
-
-  // 特殊逻辑：厥阴与少阳的区分
-  // 当厥阴得分接近少阳（差距<5分）且有寒热错杂+下利特征时，判为厥阴
-  if (meridian === '少阳病' && scores['厥阴病'] > 0 && (maxScore - scores['厥阴病']) < 5) {
-    const hasJueyinFeatures = (hasColdSignJueyin && hasHeatSignJueyin) || 
-                              ((answers.q4_stool === '腹泻' || answers.q4_stool === '稀溏' || answers.q4_stool === '便溏') && answers.q5_nausea);
-    if (hasJueyinFeatures) {
-      meridian = '厥阴病';
-      maxScore = scores['厥阴病'];
-      console.log('[厥阴优先] 厥阴得分:', scores['厥阴病'], '少阳得分:', scores['少阳病'], '差距:', maxScore - scores['厥阴病']);
-    }
-  }
-
-  // 调试日志：打印每经得分
-  console.log('[辨证评分]', JSON.stringify(scores));
-  console.log('[最高分经]', meridian, '得分:', maxScore);
-
-  // 检查是否达到阈值
-  const threshold = THRESHOLDS[meridian as keyof typeof THRESHOLDS];
-  if (maxScore < threshold) {
-    // 如果最高分未达到阈值，默认返回太阳病（表证最常见）
-    return {
-      meridian: '太阳病',
-      syndrome: '太阳表虚证',
-      scores,
-      isTableDeficiency: true,
-    };
-  }
-
-  // 确定证型
-  let syndrome = '';
-  if (meridian === '太阳病') {
-    syndrome = isTableExcess ? '太阳表实证' : '太阳表虚证';
-  } else if (meridian === '阳明病') {
-    syndrome = isYangmingFu ? '阳明腑实证' : '阳明经证';
-  } else if (meridian === '少阳病') {
-    syndrome = '少阳本证';
-  } else if (meridian === '太阴病') {
-    syndrome = '太阴虚寒证';
-  } else if (meridian === '少阴病') {
-    syndrome = isShaoyinHeat ? '少阴热化证' : '少阴寒化证';
-  } else if (meridian === '厥阴病') {
-    syndrome = '厥阴寒热错杂证';
-  }
-
-  return { 
-    meridian, 
-    syndrome, 
-    scores,
-    isTableExcess,
-    isTableDeficiency,
-    isYangmingChannel,
-    isYangmingFu,
-    isShaoyinCold,
-    isShaoyinHeat,
-  };
-}
-
-// 开合枢截断逻辑 - 根据六经传变规律
-// 阳经病（太阳、阳明、少阳）：加少阳方守住枢机
-// 阴经病（太阴、少阴、厥阴）：加少阴方+少阳方，保证病传阳明而止
-function checkInterception(answers: Answers, scores: Record<string, number>, currentMeridian: string): { 
-  type: '少阳枢' | '少阴枢' | '阴阳双枢' | null; 
-  reason: string;
-  combinedMeridian?: string;
-  isYangMeridian?: boolean; // 是否为阳经病
-} {
-  // 判断当前经是阳经还是阴经
-  const yangMerdians = ['太阳病', '阳明病', '少阳病'];
-  const yinMeridians = ['太阴病', '少阴病', '厥阴病'];
-  const isYangMeridian = yangMerdians.includes(currentMeridian);
-  const isYinMeridian = yinMeridians.includes(currentMeridian);
-
-  // 检查少阳枢机不利症状
-  const shaoyangSigns = [
-    answers.q8_taste === '口苦',
-    answers.q6_hypochondrium,
-    answers.q1_alternating,
-    answers.q5_nausea,
-  ].filter(Boolean).length;
-
-  // 检查少阴枢机不利症状
-  const shaoyinSigns = [
-    answers.q3_heavy && answers.q1_cold && !answers.q1_fever,
-    answers.q4_stool === '腹泻' && answers.q3_heavy,
-    answers.q1_cold && !answers.q1_fever && answers.q3_heavy,
-  ].filter(Boolean).length;
-
-  // 西药史阳性
-  const hasWesternMedicine = answers.q9_medicine === true;
-
-  // 阳经病：必须守少阳枢机，保证病不内传阴经
-  if (isYangMeridian) {
-    if (shaoyangSigns >= 2 || hasWesternMedicine) {
-      return {
-        type: '少阳枢',
-        reason: hasWesternMedicine 
-          ? '阳经病兼服西药，合小柴胡汤守少阳枢机，防内传' 
-          : `阳经病（${currentMeridian}）见少阳枢机不利之象，合小柴胡汤守枢机，防传阴经`,
-        combinedMeridian: currentMeridian,
-        isYangMeridian: true,
-      };
-    }
-    // 阳经病即使没有明显少阳症状，也应预防性守枢机
-    return {
-      type: '少阳枢',
-      reason: `阳经病（${currentMeridian}）当守少阳枢机，防邪内传阴经`,
-      combinedMeridian: currentMeridian,
-      isYangMeridian: true,
-    };
-  }
-
-  // 厥阴病出现少阳症状：厥阴少阳并病
-  if (currentMeridian === '厥阴病' && shaoyangSigns >= 2) {
-    return {
-      type: '少阳枢',
-      reason: `厥阴病（${currentMeridian}）见少阳枢机不利之象，厥阴少阳并病，合小柴胡汤`,
-      combinedMeridian: '厥阴少阳并病',
-      isYangMeridian: false,
-    };
-  }
-
-  // 阴经病：必须守少阴+少阳双枢，保证病传阳明而止
-  if (isYinMeridian) {
-    return {
-      type: '阴阳双枢',
-      reason: `阴经病（${currentMeridian}）当守少阴枢机温阳，合少阳枢机透邪外出，使病传阳明而解`,
-      combinedMeridian: currentMeridian,
-      isYangMeridian: false,
-    };
-  }
-
-  return { type: null, reason: '' };
-}
-
-// 获取方剂信息
-function getPrescription(
-  meridian: string, 
-  syndrome: string,
-  isTableExcess?: boolean,
-  isTableDeficiency?: boolean,
-  isYangmingChannel?: boolean,
-  isYangmingFu?: boolean,
-  isShaoyinCold?: boolean,
-  isShaoyinHeat?: boolean
-): {
-  prescription: string;
-  composition: string;
-  dosage: string;
-  preparation: string;
-  usage: string;
-  effects: string;
-  indications: string;
-  contraindications: string;
-  notes: string;
-} {
-  const prescriptions: Record<string, {
-    prescription: string;
-    composition: string;
-    dosage: string;
-    preparation: string;
-    usage: string;
-    effects: string;
-    indications: string;
-    contraindications: string;
-    notes: string;
-  }> = {
-    '太阳表实证': {
-      prescription: '麻黄汤',
-      composition: '麻黄、桂枝、杏仁、甘草',
-      dosage: '麻黄9g，桂枝6g，杏仁9g，甘草3g',
-      preparation: '水煎服',
-      usage: '温服，药后覆取微汗',
-      effects: '发汗解表，宣肺平喘',
-      indications: '太阳表实证，恶寒发热，无汗而喘，脉浮紧',
-      contraindications: '表虚自汗者禁用',
-      notes: '温服，药后覆取微汗。忌生冷、油腻、辛辣。注意观察汗出情况，得汗即止，不可过服。儿童减量1/3，老人减量1/4。服药后症状无改善或加重，请及时就医。',
-    },
-    '太阳表虚证': {
-      prescription: '桂枝汤',
-      composition: '桂枝、白芍、生姜、大枣、甘草',
-      dosage: '桂枝9g，白芍9g，生姜9g，大枣4枚，甘草6g',
-      preparation: '水煎服',
-      usage: '温服，药后啜热粥，取微汗',
-      effects: '解肌发表，调和营卫',
-      indications: '太阳表虚证，发热汗出，恶风脉浮缓',
-      contraindications: '表实无汗者禁用',
-      notes: '温服，药后啜热粥以助药力。忌生冷、油腻、辛辣。注意观察汗出情况。儿童减量1/3，老人减量1/4。服药后症状无改善或加重，请及时就医。',
-    },
-    '阳明经证': {
-      prescription: '白虎汤',
-      composition: '石膏、知母、甘草、粳米',
-      dosage: '石膏30g，知母12g，甘草6g，粳米18g',
-      preparation: '水煎，米熟汤成',
-      usage: '温服',
-      effects: '清热生津',
-      indications: '阳明经证，大热大渴大汗脉洪大',
-      contraindications: '表证未解者禁用',
-      notes: '石膏先煎30分钟。忌生冷、油腻、辛辣。观察汗出及口渴变化。儿童减量1/3，老人减量1/4。服药后症状无改善或加重，请及时就医。',
-    },
-    '阳明腑实证': {
-      prescription: '大承气汤',
-      composition: '大黄、厚朴、枳实、芒硝',
-      dosage: '大黄12g，厚朴15g，枳实9g，芒硝9g',
-      preparation: '水煎，芒硝溶服',
-      usage: '分二次温服，得下止后服',
-      effects: '峻下热结',
-      indications: '阳明腑实证，潮热谵语，腹满痛便秘，脉沉实',
-      contraindications: '表证未解、阴虚者禁用',
-      notes: '大黄后下，芒硝溶服。忌生冷、油腻、辛辣。观察二便变化，中病即止，不可过服。儿童减量1/3，老人减量1/4。服药后症状无改善或加重，请及时就医。',
-    },
-    '少阳本证': {
-      prescription: '小柴胡汤',
-      composition: '柴胡、黄芩、人参、半夏、生姜、大枣、甘草',
-      dosage: '柴胡24g，黄芩9g，人参9g，半夏9g，生姜9g，大枣4枚，甘草6g',
-      preparation: '水煎服',
-      usage: '去滓再煎，温服',
-      effects: '和解少阳',
-      indications: '少阳证，寒热往来，胸胁苦满，默默不欲饮食，心烦喜呕，口苦咽干目眩',
-      contraindications: '阴虚血少者慎用',
-      notes: '去滓再煎，温服。忌生冷、油腻、辛辣。观察寒热变化。儿童减量1/3，老人减量1/4。服药后症状无改善或加重，请及时就医。',
-    },
-    '太阴虚寒证': {
-      prescription: '理中汤',
-      composition: '人参、干姜、白术、甘草',
-      dosage: '人参9g，干姜9g，白术9g，甘草9g',
-      preparation: '水煎服',
-      usage: '温服',
-      effects: '温中健脾，散寒除湿',
-      indications: '太阴虚寒证，腹满吐利，食不下，口不渴',
-      contraindications: '实热积滞者禁用',
-      notes: '温服。忌生冷、油腻、辛辣。观察二便变化。儿童减量1/3，老人减量1/4。服药后症状无改善或加重，请及时就医。',
-    },
-    '少阴寒化证': {
-      prescription: '四逆汤',
-      composition: '附子、干姜、甘草',
-      dosage: '附子15g（先煎），干姜9g，甘草6g',
-      preparation: '水煎服',
-      usage: '温服',
-      effects: '回阳救逆',
-      indications: '少阴寒化证，四肢厥逆，脉微欲绝',
-      contraindications: '热厥、阴虚者禁用',
-      notes: '附子必须先煎30分钟以上至口尝无麻味。忌生冷、油腻、辛辣。观察四肢温度及脉搏变化。儿童减量1/3，老人减量1/4。服药后症状无改善或加重，请及时就医。',
-    },
-    '少阴热化证': {
-      prescription: '黄连阿胶汤',
-      composition: '黄连、黄芩、白芍、阿胶、鸡子黄',
-      dosage: '黄连12g，黄芩6g，白芍12g，阿胶9g（烊化），鸡子黄2枚',
-      preparation: '水煎，阿胶烊化，鸡子黄搅入',
-      usage: '温服',
-      effects: '滋阴降火，交通心肾',
-      indications: '少阴热化证，心烦不得眠，口燥咽痛',
-      contraindications: '阳虚者禁用',
-      notes: '阿胶烊化，鸡子黄搅入。忌生冷、油腻、辛辣。观察睡眠及心烦变化。儿童减量1/3，老人减量1/4。服药后症状无改善或加重，请及时就医。',
-    },
-    '厥阴寒热错杂证': {
-      prescription: '乌梅丸',
-      composition: '乌梅、细辛、干姜、黄连、当归、附子、蜀椒、桂枝、人参、黄柏',
-      dosage: '乌梅30g，细辛3g，干姜9g，黄连12g，当归6g，附子6g（先煎），蜀椒6g，桂枝6g，人参6g，黄柏6g',
-      preparation: '蜜丸或水煎服',
-      usage: '日三服',
-      effects: '清上温下，寒热并调',
-      indications: '厥阴寒热错杂证',
-      contraindications: '纯热无寒或纯寒无热者不宜',
-      notes: '附子先煎30分钟。忌生冷、油腻、辛辣。观察寒热变化。儿童减量1/3，老人减量1/4。服药后症状无改善或加重，请及时就医。',
-    },
-  };
-
-  return prescriptions[syndrome] || prescriptions['太阳表虚证'];
-}
-
-// 获取合方信息
-function getCombinedPrescription(
-  currentMeridian: string,
-  interceptionType: '少阳枢' | '少阴枢' | '阴阳双枢'
-): {
-  prescription: string;
-  composition: string;
-  dosage: string;
-  preparation: string;
-  usage: string;
-  effects: string;
-  indications: string;
-  notes: string;
-} | null {
-  const combinedPrescriptions: Record<string, {
-    prescription: string;
-    composition: string;
-    dosage: string;
-    preparation: string;
-    usage: string;
-    effects: string;
-    indications: string;
-    notes: string;
-  }> = {
-    // 少阳为枢合方（阳经病）
-    '太阳病_少阳枢': {
-      prescription: '柴胡桂枝汤',
-      composition: '柴胡、黄芩、人参、半夏、桂枝、白芍、生姜、大枣、甘草',
-      dosage: '柴胡12g，黄芩6g，人参6g，半夏6g，桂枝6g，白芍6g，生姜6g，大枣3枚，甘草3g',
-      preparation: '水煎服',
-      usage: '温服',
-      effects: '和解少阳，兼以解表',
-      indications: '太阳少阳合病，发热微恶寒，支节烦疼，微呕，心下支结',
-      notes: '温服。忌生冷、油腻、辛辣。观察寒热变化。儿童减量1/3，老人减量1/4。',
-    },
-    '阳明病_少阳枢': {
-      prescription: '大柴胡汤',
-      composition: '柴胡、黄芩、半夏、生姜、大枣、芍药、枳实、大黄',
-      dosage: '柴胡24g，黄芩9g，半夏9g，生姜15g，大枣4枚，芍药9g，枳实9g，大黄6g',
-      preparation: '水煎服',
-      usage: '分二次温服',
-      effects: '和解少阳，通下里实',
-      indications: '少阳阳明合病，呕不止，心下急，郁郁微烦',
-      notes: '大黄后下。忌生冷、油腻、辛辣。观察二便变化。儿童减量1/3，老人减量1/4。',
-    },
-    '少阳病_少阳枢': {
-      prescription: '小柴胡汤',
-      composition: '柴胡、黄芩、人参、半夏、生姜、大枣、甘草',
-      dosage: '柴胡24g，黄芩9g，人参9g，半夏9g，生姜9g，大枣4枚，甘草6g',
-      preparation: '水煎服',
-      usage: '去滓再煎，温服',
-      effects: '和解少阳',
-      indications: '少阳证，寒热往来，胸胁苦满，默默不欲饮食，心烦喜呕',
-      notes: '去滓再煎，温服。忌生冷、油腻、辛辣。观察寒热变化。儿童减量1/3，老人减量1/4。',
-    },
-    // 阴阳双枢合方（阴经病：少阴+少阳）
-    '太阴病_阴阳双枢': {
-      prescription: '附子理中汤合小柴胡汤化裁',
-      composition: '人参、白术、干姜、附子、甘草、柴胡、黄芩、半夏',
-      dosage: '人参9g，白术9g，干姜9g，附子15g（先煎），甘草6g，柴胡12g，黄芩6g，半夏6g',
-      preparation: '水煎服',
-      usage: '温服',
-      effects: '温中健脾，和解少阳，透邪外出',
-      indications: '太阴病合少阳少阴枢机不利，腹满吐利兼胸胁苦满',
-      notes: '附子必须先煎30分钟以上。忌生冷、油腻、辛辣。观察二便及寒热变化。儿童减量1/3，老人减量1/4。',
-    },
-    '少阴病_阴阳双枢': {
-      prescription: '四逆汤合小柴胡汤化裁',
-      composition: '附子、干姜、甘草、柴胡、黄芩、人参、半夏',
-      dosage: '附子15g（先煎），干姜9g，甘草6g，柴胡12g，黄芩6g，人参6g，半夏6g',
-      preparation: '水煎服',
-      usage: '温服',
-      effects: '回阳救逆，和解少阳，透邪外出',
-      indications: '少阴病合少阳枢机不利，四肢厥逆兼寒热往来',
-      notes: '附子必须先煎30分钟以上。忌生冷、油腻、辛辣。观察四肢温度及寒热变化。儿童减量1/3，老人减量1/4。',
-    },
-    '厥阴病_阴阳双枢': {
-      prescription: '四逆汤合小柴胡汤合乌梅丸化裁',
-      composition: '附子、干姜、甘草、柴胡、黄芩、人参、半夏、乌梅、黄连',
-      dosage: '附子15g（先煎），干姜9g，甘草6g，柴胡12g，黄芩6g，人参6g，半夏6g，乌梅15g，黄连6g',
-      preparation: '水煎服',
-      usage: '温服',
-      effects: '回阳救逆，和解少阳，清上温下',
-      indications: '厥阴病合少阳少阴枢机不利，寒热错杂兼四肢厥逆',
-      notes: '附子先煎30分钟。忌生冷、油腻、辛辣。观察寒热及四肢变化。儿童减量1/3，老人减量1/4。',
-    },
-    // 厥阴少阳并病合方
-    '厥阴少阳并病_少阳枢': {
-      prescription: '小柴胡汤',
-      composition: '柴胡、黄芩、人参、半夏、甘草',
-      dosage: '柴胡12g，黄芩6g，人参6g，半夏6g，甘草3g',
-      preparation: '水煎服',
-      usage: '温服',
-      effects: '和解少阳',
-      indications: '少阳枢机不利，胸胁苦满、口苦咽干',
-      notes: '忌生冷、油腻、辛辣。观察寒热变化。儿童减量1/3，老人减量1/4。',
-    },
-  };
-
-  const key = `${currentMeridian}_${interceptionType}`;
-  return combinedPrescriptions[key] || null;
-}
-
-// 年龄体重调整药量
-function adjustDosage(dosage: string, age: number, weight: number): string {
-  let adjusted = dosage;
-  
-  // 儿童（<12岁）：药量减半
-  if (age < 12) {
-    adjusted = adjusted.replace(/(\d+)g/g, (match, num) => {
-      const adjusted_num = Math.round(parseInt(num) / 2);
-      return `${adjusted_num}g`;
-    });
-    return adjusted + '（儿童用量减半）';
-  }
-  
-  // 老人（>65岁）：药量酌减1/3
-  if (age > 65) {
-    adjusted = adjusted.replace(/(\d+)g/g, (match, num) => {
-      const adjusted_num = Math.round(parseInt(num) * 2 / 3);
-      return `${adjusted_num}g`;
-    });
-    return adjusted + '（老人用量酌减）';
-  }
-  
-  // 体重<50kg：药量酌减
-  if (weight < 50) {
-    adjusted = adjusted.replace(/(\d+)g/g, (match, num) => {
-      const adjusted_num = Math.round(parseInt(num) * 0.75);
-      return `${adjusted_num}g`;
-    });
-    return adjusted + '（体重较轻，用量酌减）';
-  }
-  
-  // 体重>80kg：药量酌增
-  if (weight > 80) {
-    adjusted = adjusted.replace(/(\d+)g/g, (match, num) => {
-      const adjusted_num = Math.round(parseInt(num) * 1.25);
-      return `${adjusted_num}g`;
-    });
-    return adjusted + '（体重较重，用量酌增）';
-  }
-  
-  return adjusted;
+  q1_cold: boolean;
+  q1_fever: boolean;
+  q1_alternating: boolean;
+  q1_sweat: boolean | string;
+  q2_spontaneous: boolean;
+  q2_night: boolean;
+  q2_location: string;
+  q3_headache: boolean;
+  q3_head_location: string;
+  q3_body_pain: boolean;
+  q3_body_location: string;
+  q3_heavy: boolean;
+  q4_stool: string;
+  q4_urine: string;
+  q5_appetite: boolean | string;
+  q5_nausea: boolean;
+  q6_chest_tight: boolean;
+  q6_chest_pain: boolean;
+  q6_hypochondrium: boolean;
+  q6_palpitation: boolean;
+  q7_tinnitus: boolean;
+  q7_hearing: boolean;
+  q8_thirsty: boolean;
+  q8_thirst_level: string;
+  q8_drink_pref: string;
+  q8_taste: string;
+  q9_chronic: boolean;
+  q9_medicine: boolean;
+  q9_skin: boolean;
+  q9_pain: boolean;
+  q10_duration: string;
+  q10_cause: string;
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    
-    // 兼容两种数据格式
-    const userInfo = body.userInfo || {};
-    const name = body.name || userInfo.name;
-    const age = body.age || userInfo.age;
-    const weight = body.weight || userInfo.weight;
-    const gender = userInfo.gender || null;
-    const menstrual_cycle = userInfo.menstrual_cycle || null;
-    const menstrual_flow = userInfo.menstrual_flow || null;
-    const menstrual_pain = userInfo.menstrual_pain || null;
-    
-    // 字段映射：支持新格式（chills, fever等）和旧格式（q1_cold, q1_fever等）
-    const rawAnswers = body.answers || {};
-    const answers: Answers = {
-      // 第一问·寒热
-      q1_cold: rawAnswers.q1_cold ?? rawAnswers.chills ?? null,
-      q1_fever: rawAnswers.q1_fever ?? rawAnswers.fever ?? null,
-      q1_alternating: rawAnswers.q1_alternating ?? rawAnswers.alternatingChillsFever ?? null,
-      q1_sweat: rawAnswers.q1_sweat === false || rawAnswers.sweating === false ? '无汗' : rawAnswers.q1_sweat === true || rawAnswers.sweating === true ? '有汗' : (rawAnswers.q1_sweat ?? null),
-      
-      // 第二问·汗
-      q2_spontaneous: rawAnswers.q2_spontaneous ?? rawAnswers.spontaneousSweating ?? null,
-      q2_night: rawAnswers.q2_night ?? rawAnswers.nightSweating ?? null,
-      q2_location: rawAnswers.q2_location ?? null,
-      
-      // 第三问·头身
-      q3_headache: rawAnswers.q3_headache ?? rawAnswers.headache ?? null,
-      q3_head_location: rawAnswers.q3_head_location ?? null,
-      q3_body_pain: rawAnswers.q3_body_pain ?? rawAnswers.bodyAche ?? null,
-      q3_body_location: rawAnswers.q3_body_location ?? null,
-      q3_heavy: rawAnswers.q3_heavy ?? rawAnswers.fatigue ?? rawAnswers.bodyHeavy ?? null,
-      
-      // 第四问·便
-      q4_stool: rawAnswers.q4_stool ?? (rawAnswers.constipation ? '便秘' : rawAnswers.diarrhea ? '腹泻' : '正常'),
-      q4_urine: rawAnswers.q4_urine ?? (rawAnswers.urineDark ? '尿黄短少' : null),
-      
-      // 第五问·饮食
-      q5_appetite: rawAnswers.q5_appetite ?? (rawAnswers.appetite === false ? '食欲减退' : rawAnswers.appetite === true ? '正常' : null),
-      q5_nausea: rawAnswers.q5_nausea ?? rawAnswers.nausea ?? null,
-      
-      // 第六问·胸
-      q6_chest_tight: rawAnswers.q6_chest_tight ?? rawAnswers.chestTightness ?? rawAnswers.abdominalDistension ?? null,
-      q6_chest_pain: rawAnswers.q6_chest_pain ?? null,
-      q6_hypochondrium: rawAnswers.q6_hypochondrium ?? rawAnswers.hypochondriumFullness ?? null,
-      q6_palpitation: rawAnswers.q6_palpitation ?? rawAnswers.palpitations ?? null,
-      
-      // 第七问·聋
-      q7_tinnitus: rawAnswers.q7_tinnitus ?? rawAnswers.tinnitus ?? null,
-      q7_hearing: rawAnswers.q7_hearing ?? null,
-      
-      // 第八问·渴
-      q8_thirsty: rawAnswers.q8_thirsty ?? rawAnswers.thirst ?? null,
-      q8_thirst_level: rawAnswers.q8_thirst_level ?? rawAnswers.thirstLevel ?? null,
-      q8_drink_pref: rawAnswers.q8_drink_pref ?? null,
-      q8_taste: rawAnswers.q8_taste ?? (rawAnswers.bitterTaste === true ? '口苦' : null),
-      
-      // 第九问·旧病
-      q9_chronic: rawAnswers.q9_chronic ?? null,
-      q9_chronic_desc: rawAnswers.q9_chronic_desc || '',
-      q9_medicine: rawAnswers.q9_medicine ?? null,
-      q9_medicine_desc: rawAnswers.q9_medicine_desc || '',
-      q9_skin: rawAnswers.q9_skin ?? null,
-      q9_skin_desc: rawAnswers.q9_skin_desc || '',
-      q9_pain: rawAnswers.q9_pain ?? null,
-      q9_pain_desc: rawAnswers.q9_pain_desc || '',
-      
-      // 第十问·因
-      q10_duration: rawAnswers.q10_duration ?? null,
-      q10_cause: rawAnswers.q10_cause ?? null,
+    const { userInfo, answers } = body;
+
+    // 字段映射：兼容新旧格式
+    const a = {
+      chills: answers.q1_cold,
+      fever: answers.q1_fever,
+      alternating: answers.q1_alternating,
+      sweating: answers.q1_sweat === true || answers.q1_sweat === '有汗',
+      noSweat: answers.q1_sweat === false || answers.q1_sweat === '无汗',
+      spontaneousSweat: answers.q2_spontaneous,
+      nightSweat: answers.q2_night,
+      sweatLocation: answers.q2_location,
+      headache: answers.q3_headache,
+      headLocation: answers.q3_head_location,
+      bodyPain: answers.q3_body_pain,
+      bodyLocation: answers.q3_body_location,
+      heavy: answers.q3_heavy,
+      stool: answers.q4_stool,
+      urine: answers.q4_urine,
+      appetite: answers.q5_appetite === true || answers.q5_appetite === '正常',
+      appetitePoor: answers.q5_appetite === false || answers.q5_appetite === '食欲减退',
+      nausea: answers.q5_nausea,
+      chestTight: answers.q6_chest_tight,
+      chestPain: answers.q6_chest_pain,
+      hypochondrium: answers.q6_hypochondrium,
+      palpitation: answers.q6_palpitation,
+      tinnitus: answers.q7_tinnitus,
+      hearingLoss: answers.q7_hearing,
+      thirsty: answers.q8_thirsty,
+      thirstLevel: answers.q8_thirst_level,
+      drinkPref: answers.q8_drink_pref,
+      taste: answers.q8_taste,
+      chronic: answers.q9_chronic,
+      westernMedicine: answers.q9_medicine,
+      skinIssues: answers.q9_skin,
+      pain: answers.q9_pain,
+      duration: answers.q10_duration,
+      cause: answers.q10_cause,
+      pulseType: answers.pulseType || 'normal',
     };
 
-    // 调试日志：打印映射后的answers
-    console.log('[诊断API] 映射后的answers:', JSON.stringify(answers, null, 2));
-
-    if (!name || !age || !weight || !answers) {
-      return NextResponse.json({ error: '缺少必要参数' }, { status: 400 });
-    }
-
-    // 辨证分析
-    const { 
-      meridian, 
-      syndrome, 
-      scores,
-      isTableExcess,
-      isTableDeficiency,
-      isYangmingChannel,
-      isYangmingFu,
-      isShaoyinCold,
-      isShaoyinHeat,
-    } = analyzeMeridian(answers);
-    
-    // 开合枢截断检查
-    const interception = checkInterception(answers, scores, meridian);
-    
-    // 获取方剂
-    const prescriptionInfo = getPrescription(
-      meridian, 
-      syndrome,
-      isTableExcess,
-      isTableDeficiency,
-      isYangmingChannel,
-      isYangmingFu,
-      isShaoyinCold,
-      isShaoyinHeat
-    );
-    
-    // 获取合方（如果有截断）
-    let combinedPrescriptionInfo = null;
-    if (interception.type && interception.combinedMeridian) {
-      combinedPrescriptionInfo = getCombinedPrescription(
-        interception.combinedMeridian,
-        interception.type
-      );
-    }
-    
-    // 调整药量
-    const adjustedDosage = adjustDosage(prescriptionInfo.dosage, age, weight);
-
-    // 构建合方信息（合并到推荐用药中）
-    const combinedPrescription = combinedPrescriptionInfo?.prescription || (interception.type === '少阳枢' ? '小柴胡汤' : '四逆汤');
-    
-    // 将合方药物合并到推荐用药中
-    let finalComposition = prescriptionInfo.composition;
-    let finalDosage = adjustedDosage;
-    let finalEffects = prescriptionInfo.effects;
-    let finalIndications = prescriptionInfo.indications;
-    
-    if (combinedPrescriptionInfo) {
-      // 合并药物组成（去重）
-      const baseHerbs = prescriptionInfo.composition.split('、').map(h => h.trim());
-      const addHerbs = combinedPrescriptionInfo.composition.split('、').map(h => h.trim());
-      const uniqueHerbs = [...new Set([...baseHerbs, ...addHerbs])];
-      finalComposition = uniqueHerbs.join('、');
-      
-      // 合并剂量（去重，保留第一个出现的剂量）
-      const baseDosageParts = prescriptionInfo.dosage.split('，').map(d => d.trim());
-      const addDosageParts = combinedPrescriptionInfo.dosage.split('，').map(d => d.trim());
-      const dosageMap = new Map<string, string>();
-      
-      // 先添加合方的剂量
-      addDosageParts.forEach(part => {
-        const match = part.match(/^(.+?)\d+g/);
-        if (match) {
-          const herbName = match[1].trim();
-          dosageMap.set(herbName, part);
-        }
-      });
-      
-      // 再添加本方的剂量（覆盖合方的）
-      baseDosageParts.forEach(part => {
-        const match = part.match(/^(.+?)\d+g/);
-        if (match) {
-          const herbName = match[1].trim();
-          dosageMap.set(herbName, part);
-        }
-      });
-      
-      finalDosage = Array.from(dosageMap.values()).join('，');
-      
-      // 合并功效
-      finalEffects = prescriptionInfo.effects + '，' + combinedPrescriptionInfo.effects;
-      // 合并主治
-      finalIndications = prescriptionInfo.indications + '；' + combinedPrescriptionInfo.indications;
-    }
-
-    // 添加健脾胃药材：白术、当归（所有方剂都加）
-    const 健脾Herbs = ['白术', '当归'];
-    const baseHerbs = finalComposition.split('、').map(h => h.trim());
-    const uniqueHerbs = [...new Set([...baseHerbs, ...健脾Herbs])];
-    finalComposition = uniqueHerbs.join('、');
-    
-    // 添加白术、当归的剂量
-    const baseDosageParts = finalDosage.split('，').map(d => d.trim());
-    const dosageMap = new Map<string, string>();
-    
-    // 先解析现有剂量
-    baseDosageParts.forEach(part => {
-      const match = part.match(/^(.+?)\d+g/);
-      if (match) {
-        const herbName = match[1].trim();
-        dosageMap.set(herbName, part);
-      }
-    });
-    
-    // 添加白术、当归剂量（各9g）
-    if (!dosageMap.has('白术')) dosageMap.set('白术', '白术9g');
-    if (!dosageMap.has('当归')) dosageMap.set('当归', '当归9g');
-    
-    // 有西药史的加鸡内金、神曲、炒麦芽
-    const hasWesternMedicine = answers.q9_medicine === true;
-    if (hasWesternMedicine) {
-      const 消化Herbs = ['鸡内金', '神曲', '炒麦芽'];
-      const currentHerbs = finalComposition.split('、').map(h => h.trim());
-      finalComposition = [...new Set([...currentHerbs, ...消化Herbs])].join('、');
-      
-      if (!dosageMap.has('鸡内金')) dosageMap.set('鸡内金', '鸡内金9g');
-      if (!dosageMap.has('神曲')) dosageMap.set('神曲', '神曲9g');
-      if (!dosageMap.has('炒麦芽')) dosageMap.set('炒麦芽', '炒麦芽15g');
-    }
-    
-    // 用下法的加木香、砂仁、大黄（阳明腑实证用大承气汤）
-    const isPurgingMethod = syndrome === '阳明腑实证' || prescriptionInfo.prescription.includes('大承气汤');
-    if (isPurgingMethod) {
-      const 下法Herbs = ['木香', '砂仁', '大黄'];
-      const currentHerbs = finalComposition.split('、').map(h => h.trim());
-      finalComposition = [...new Set([...currentHerbs, ...下法Herbs])].join('、');
-      
-      if (!dosageMap.has('木香')) dosageMap.set('木香', '木香6g');
-      if (!dosageMap.has('砂仁')) dosageMap.set('砂仁', '砂仁6g（后下）');
-      if (!dosageMap.has('大黄')) dosageMap.set('大黄', '大黄12g（后下）');
-    }
-
-    // 女性妇科问题：月经异常合温经汤
-    const isFemale = gender === '女';
-    const hasMenstrualIssue = isFemale && (
-      menstrual_cycle === '提前' || menstrual_cycle === '推后' || menstrual_cycle === '不定期' ||
-      menstrual_flow === '量多' || menstrual_flow === '量少' ||
-      menstrual_pain === '有痛经'
-    );
-    let gynecologyNote = '';
-    if (hasMenstrualIssue) {
-      // 温经汤组成：吴茱萸、当归、川芎、白芍、人参、桂枝、阿胶、生姜、甘草、半夏、麦冬
-      const 温经Herbs = ['吴茱萸', '川芎', '阿胶', '麦冬'];
-      const currentHerbs = finalComposition.split('、').map(h => h.trim());
-      finalComposition = [...new Set([...currentHerbs, ...温经Herbs])].join('、');
-      
-      if (!dosageMap.has('吴茱萸')) dosageMap.set('吴茱萸', '吴茱萸6g');
-      if (!dosageMap.has('川芎')) dosageMap.set('川芎', '川芎9g');
-      if (!dosageMap.has('阿胶')) dosageMap.set('阿胶', '阿胶9g（烊化）');
-      if (!dosageMap.has('麦冬')) dosageMap.set('麦冬', '麦冬9g');
-      
-      // 月经量多：加黄芪（补气摄血）
-      if (menstrual_flow === '量多') {
-        if (!dosageMap.has('黄芪')) dosageMap.set('黄芪', '黄芪15g');
-        const h = finalComposition.split('、').map(x => x.trim());
-        if (!h.includes('黄芪')) finalComposition = [...h, '黄芪'].join('、');
-      }
-      
-      // 月经量少：加熟地（补血养阴）
-      if (menstrual_flow === '量少') {
-        if (!dosageMap.has('熟地')) dosageMap.set('熟地', '熟地12g');
-        const h = finalComposition.split('、').map(x => x.trim());
-        if (!h.includes('熟地')) finalComposition = [...h, '熟地'].join('、');
-      }
-      
-      // 构建妇科说明
-      const cycleDesc = menstrual_cycle && menstrual_cycle !== '正常' ? `月经周期${menstrual_cycle}` : '';
-      const flowDesc = menstrual_flow && menstrual_flow !== '正常' ? `月经量${menstrual_flow}` : '';
-      const painDesc = menstrual_pain === '有痛经' ? '痛经' : '';
-      const menstrualDesc = [cycleDesc, flowDesc, painDesc].filter(Boolean).join('、');
-      gynecologyNote = `患者为女性，兼有${menstrualDesc}，合温经汤温经散寒、养血调经。`;
-      if (menstrual_flow === '量多') gynecologyNote += '量多加黄芪补气摄血。';
-      if (menstrual_flow === '量少') gynecologyNote += '量少加熟地补血养阴。';
-      
-      console.log('[妇科] 女性患者，月经异常:', menstrualDesc, '合温经汤');
-    }
-
-    // 三阴病（太阴、少阴、厥阴）加生地
-    const yinMeridians = ['太阴病', '少阴病', '厥阴病'];
-    if (yinMeridians.includes(meridian)) {
-      if (!dosageMap.has('生地')) dosageMap.set('生地', '生地12g');
-      const h = finalComposition.split('、').map(x => x.trim());
-      if (!h.includes('生地')) finalComposition = [...h, '生地'].join('、');
-    }
-    
-    finalDosage = Array.from(dosageMap.values()).join('，');
-
-    const result: DiagnosisResult = {
-      meridian,
-      meridianFull: meridian,
-      syndrome,
-      prescription: prescriptionInfo.prescription + (combinedPrescriptionInfo && combinedPrescriptionInfo.prescription !== prescriptionInfo.prescription ? ' 合 ' + combinedPrescriptionInfo.prescription : '') + (hasMenstrualIssue ? ' 合 温经汤' : ''),
-      composition: finalComposition,
-      dosage: finalDosage,
-      preparation: prescriptionInfo.preparation,
-      usage: prescriptionInfo.usage,
-      effects: finalEffects + (hasMenstrualIssue ? '，温经散寒，养血调经' : ''),
-      indications: finalIndications + (hasMenstrualIssue ? '；兼调月经' : ''),
-      contraindications: "", // 禁忌不显示
-      notes: prescriptionInfo.notes + (gynecologyNote ? ' ' + gynecologyNote : ''), // 不包含截断方注意事项
-      interception: {
-        type: null, // 截断类型不显示，留在付费后的推理中
-        reason: '', // 截断原因不显示，留在付费后的推理中
-        combinedPrescription: combinedPrescription, // 合方显示在推荐用药中
-      },
-      dietaryAdvice: [
-        '忌生冷寒凉',
-        '忌油腻厚味',
-        '忌辛辣刺激',
-        '宜温热饮食',
-        ...(meridian === '太阳病' ? ['可饮生姜红糖水助汗'] : []),
-        ...(meridian === '阳明病' ? ['可饮绿豆汤清热', '多食梨、西瓜等清热生津之品'] : []),
-        ...(meridian === '太阴病' ? ['可食山药、大枣健脾', '忌生冷瓜果'] : []),
-        ...(meridian === '少阴病' ? ['宜温补食材', '忌寒凉生冷'] : []),
-      ],
-      lifestyleAdvice: [
-        '服药后注意观察汗出、二便、寒热变化',
-        '服药方法：温服，频服',
-        '年龄体重剂量调整：儿童减量1/3，老人减量1/4',
-        '服药后症状无改善或加重，请及时就医',
-        ...(meridian === '太阳病' ? ['注意避风保暖', '观察汗出情况'] : []),
-        ...(meridian === '阳明病' ? ['观察二便变化', '保持大便通畅'] : []),
-        ...(meridian === '少阴病' ? ['注意保暖', '观察四肢温度'] : []),
-      ],
+    // 六经评分
+    const scores = {
+      taiyang: 0,
+      yangming: 0,
+      shaoyang: 0,
+      taiyin: 0,
+      shaoyin: 0,
+      jueyin: 0,
     };
+
+    // 太阳病评分
+    if (a.chills && a.fever) scores.taiyang += 5;
+    if (a.headache) scores.taiyang += 2;
+    if (a.bodyPain) scores.taiyang += 2;
+    if (a.noSweat) scores.taiyang += 3;
+    if (a.pulseType === 'floating') scores.taiyang += 3;
+
+    // 阳明病评分
+    if (a.fever && !a.chills) scores.yangming += 3;
+    if (a.thirsty) scores.yangming += 3;
+    if (a.stool === '便秘') scores.yangming += 3;
+    if (a.taste === '口臭') scores.yangming += 2;
+
+    // 少阳病评分
+    if (a.alternating) scores.shaoyang += 5;
+    if (a.hypochondrium) scores.shaoyang += 3;
+    if (a.nausea) scores.shaoyang += 2;
+    if (a.taste === '口苦') scores.shaoyang += 3;
+    if (a.tinnitus) scores.shaoyang += 2;
+
+    // 太阴病评分
+    if (a.stool === '便溏' || a.stool === '腹泻') scores.taiyin += 3;
+    if (a.appetitePoor) scores.taiyin += 2;
+    if (!a.thirsty) scores.taiyin += 2;
+    if (a.heavy) scores.taiyin += 1;
+
+    // 少阴病评分
+    if (a.chills && !a.fever) scores.shaoyin += 3;
+    if (a.palpitation) scores.shaoyin += 3;
+    if (a.nightSweat) scores.shaoyin += 2;
+
+    // 厥阴病评分
+    if (a.chills && a.fever) scores.jueyin += 3;
+    if (a.alternating) scores.jueyin += 2;
+    if (a.nausea && a.stool === '腹泻') scores.jueyin += 2;
+
+    // 确定病经
+    let meridian = '';
+    let meridianFull = '';
+    let maxScore = 0;
+
+    const meridianNames: Record<string, string> = {
+      taiyang: '太阳病',
+      yangming: '阳明病',
+      shaoyang: '少阳病',
+      taiyin: '太阴病',
+      shaoyin: '少阴病',
+      jueyin: '厥阴病',
+    };
+
+    for (const [key, score] of Object.entries(scores)) {
+      if (score > maxScore) {
+        maxScore = score;
+        meridian = key;
+        meridianFull = meridianNames[key];
+      }
+    }
+
+    // 阈值判断
+    if (maxScore < 8) {
+      meridian = 'taiyang';
+      meridianFull = '太阳病';
+    }
+
+    // 确定证型
+    let syndrome = '';
+    let prescription = '';
+    let composition = '';
+    let dosage = '';
+    let preparation = '水煎服';
+    let usage = '温服';
+    let effects = '';
+    let indications = '';
+    let contraindications = '';
+    let notes = '';
+
+    // 太阳病
+    if (meridian === 'taiyang') {
+      if (a.noSweat) {
+        syndrome = '太阳表实证';
+        prescription = '麻黄汤';
+        composition = '麻黄、桂枝、杏仁、甘草';
+        dosage = '麻黄9g，桂枝6g，杏仁9g，甘草3g';
+        effects = '发汗解表，宣肺平喘';
+        indications = '恶寒发热，无汗而喘，脉浮紧';
+        notes = '温服，药后覆取微汗。忌生冷、油腻、辛辣。';
+      } else {
+        syndrome = '太阳表虚证';
+        prescription = '桂枝汤';
+        composition = '桂枝、白芍、生姜、大枣、甘草';
+        dosage = '桂枝9g，白芍9g，生姜9g，大枣4枚，甘草6g';
+        effects = '解肌发表，调和营卫';
+        indications = '恶风发热，汗出头痛，脉浮缓';
+        notes = '温服，药后啜热稀粥助汗。忌生冷、油腻、辛辣。';
+      }
+    }
+
+    // 阳明病
+    if (meridian === 'yangming') {
+      if (a.stool === '便秘') {
+        syndrome = '阳明腑实证';
+        prescription = '大承气汤';
+        composition = '大黄、芒硝、实、厚朴';
+        dosage = '大黄12g，芒硝9g，实12g，厚朴24g';
+        effects = '峻下热结';
+        indications = '大便秘结，脘腹痞满，腹痛拒按';
+        notes = '得下余勿服。中病即止，不可过服。';
+      } else {
+        syndrome = '阳明经证';
+        prescription = '白虎汤';
+        composition = '石膏、知母、甘草、粳米';
+        dosage = '石膏30g，知母12g，甘草6g，粳米9g';
+        effects = '清热生津';
+        indications = '大热，大汗，大渴，脉洪大';
+        notes = '温服。脾胃虚寒者慎用。';
+      }
+    }
+
+    // 少阳病
+    if (meridian === 'shaoyang') {
+      syndrome = '少阳证';
+      prescription = '小柴胡汤';
+      composition = '柴胡、黄芩、人参、半夏、甘草、生姜、大枣';
+      dosage = '柴胡12g，黄芩6g，人参6g，半夏6g，甘草6g，生姜6g，大枣4枚';
+      effects = '和解少阳';
+      indications = '往来寒热，胸胁苦满，默默不欲饮食，心烦喜呕';
+      notes = '温服。忌生冷、油腻、辛辣。';
+    }
+
+    // 太阴病
+    if (meridian === 'taiyin') {
+      syndrome = '太阴病';
+      prescription = '理中汤';
+      composition = '人参、干姜、甘草、白术';
+      dosage = '人参9g，干姜9g，甘草9g，白术9g';
+      effects = '温中散寒，健脾益气';
+      indications = '腹满而吐，食不下，自利益甚，时腹自痛';
+      notes = '温服。服药后饮热粥助药力。';
+    }
+
+    // 少阴病
+    if (meridian === 'shaoyin') {
+      if (a.chills && !a.fever) {
+        syndrome = '少阴寒化证';
+        prescription = '四逆汤';
+        composition = '附子、干姜、甘草';
+        dosage = '附子9g，干姜9g，甘草6g';
+        effects = '回阳救逆';
+        indications = '四肢厥逆，恶寒蜷卧，呕吐不渴，腹痛下利';
+        notes = '温服。附子先煎30分钟。';
+      } else {
+        syndrome = '少阴热化证';
+        prescription = '黄连阿胶汤';
+        composition = '黄连、黄芩、芍药、鸡子黄、阿胶';
+        dosage = '黄连6g，黄6g，芍药6g，鸡子黄2枚，阿胶9g';
+        effects = '滋阴降火，除烦安神';
+        indications = '心中烦，不得卧，口燥咽干';
+        notes = '温服。阿胶烊化，鸡子黄后下。';
+      }
+    }
+
+    // 厥阴病
+    if (meridian === 'jueyin') {
+      syndrome = '厥阴病';
+      prescription = '乌梅丸';
+      composition = '乌梅、细辛、干姜、黄连、当归、附子、蜀椒、桂枝、人参、黄柏';
+      dosage = '乌梅30g，细辛3g，干姜9g，黄连9g，当归6g，附子6g，蜀椒6g，桂枝6g，人参6g，黄柏6g';
+      effects = '清上温下，安蛔止痛';
+      indications = '消渴，气上撞心，心中疼热，饥而不欲食，食则吐蛔';
+      notes = '温服。忌生冷、油腻、辛辣。';
+    }
+
+    // 合方逻辑
+    let finalPrescription = prescription;
+    let combinedPrescription = '';
+
+    // 三阳病合少阳方
+    if (meridian === 'taiyang' || meridian === 'yangming') {
+      if (prescription !== '小柴胡汤') {
+        finalPrescription = `${prescription} 合 小柴胡汤`;
+        combinedPrescription = '小柴胡汤';
+        composition += '、柴胡、黄芩、人参、半夏';
+        dosage += '，柴胡12g，黄芩6g，人参6g，半夏6g';
+        effects += '，和解少阳';
+      }
+    }
+
+    // 三阴病合少阴+少阳方
+    if (meridian === 'taiyin' || meridian === 'shaoyin' || meridian === 'jueyin') {
+      if (meridian !== 'shaoyin' && prescription !== '四逆汤' && prescription !== '黄连阿胶汤') {
+        finalPrescription = `${prescription} 合 四逆汤`;
+        combinedPrescription = '四逆汤';
+        composition += '、附子、干姜';
+        dosage += '，附子9g，干姜9g';
+        effects += '，温阳散寒';
+      }
+      if (prescription !== '小柴胡汤') {
+        finalPrescription = `${finalPrescription} 合 小柴胡汤`;
+        combinedPrescription = combinedPrescription ? `${combinedPrescription}、小柴胡汤` : '小柴胡汤';
+        composition += '、柴胡、黄、人参、半夏';
+        dosage += '，柴胡12g，黄芩6g，人参6g，半夏6g';
+        effects += '，和解少阳';
+      }
+    }
+
+    // 妇科温经汤合方
+    let menstrualInfo = '';
+    if (userInfo.gender === '女' && userInfo.age >= 12 && userInfo.age <= 55) {
+      const menstrualIssues = [];
+      if (userInfo.menstrual_cycle && userInfo.menstrual_cycle !== '正常') {
+        menstrualIssues.push(`周期${userInfo.menstrual_cycle}`);
+      }
+      if (userInfo.menstrual_flow && userInfo.menstrual_flow !== '正常') {
+        menstrualIssues.push(userInfo.menstrual_flow);
+      }
+      if (userInfo.menstrual_pain && userInfo.menstrual_pain === '有痛经') {
+        menstrualIssues.push('痛经');
+      }
+
+      if (menstrualIssues.length > 0) {
+        menstrualInfo = menstrualIssues.join('、');
+        finalPrescription = `${finalPrescription} 合 温经汤`;
+        composition += '、吴茱萸、川芎、阿胶、麦冬';
+        dosage += '，吴茱6g，川芎9g，阿胶9g，麦冬9g';
+        effects += '，温经散寒，养血调经';
+        notes += '妇科辨证：月经异常，合温经汤调经。';
+      }
+    }
+
+    // 药材加减
+    // 通用健脾胃
+    composition += '、白术、当归';
+    dosage += '，白术9g，当归9g';
+
+    // 有西药史
+    if (a.westernMedicine) {
+      composition += '、鸡内金、神曲、炒麦芽';
+      dosage += '，鸡内金9g，神曲9g，炒麦芽9g';
+      notes += '有西药服用史，加消食化积药。';
+    }
+
+    // 用下法
+    if (a.stool === '便秘') {
+      composition += '、木香、砂仁、大黄';
+      dosage += '，木香6g，砂仁6g，大黄12g';
+      notes += '用下法，加行气通便药。';
+    }
+
+    // 月经量多/量少加减
+    if (userInfo.gender === '女') {
+      if (userInfo.menstrual_flow === '量多') {
+        composition += '、黄芪';
+        dosage += '，黄芪15g';
+        notes += '月经量多，加黄芪补气摄血。';
+      } else if (userInfo.menstrual_flow === '量少') {
+        composition += '、熟地';
+        dosage += '，熟地12g';
+        notes += '月经量少，加熟地补血养阴。';
+      }
+    }
+
+    // 三阴病加生地
+    if (meridian === 'taiyin' || meridian === 'shaoyin' || meridian === 'jueyin') {
+      composition += '、生地';
+      dosage += '，生地12g';
+    }
+
+    // 饮食建议
+    const dietaryAdvice = [
+      '忌生冷寒凉',
+      '忌油腻厚味',
+      '忌辛辣刺激',
+      '宜温热饮食',
+    ];
+
+    if (meridian === 'taiyang' && a.noSweat) {
+      dietaryAdvice.push('可饮生姜红糖水助汗');
+    }
+
+    // 生活建议
+    const lifestyleAdvice = [
+      '服药后注意观察汗出、二便、寒热变化',
+      '服药方法：温服，频服',
+      '年龄体重剂量调整：儿童减量1/3，老人减量1/4',
+      '服药后症状无改善或加重，请及时就医',
+    ];
+
+    if (meridian === 'taiyang') {
+      lifestyleAdvice.push('注意避风保暖');
+      lifestyleAdvice.push('观察汗出情况');
+    }
 
     // 保存到数据库
-    const supabase = getSupabaseClient();
-    console.log('准备保存记录:', { name, age, weight, gender, meridian });
+    console.log('准备保存记录:', userInfo.name, finalPrescription);
     
-    // 构建月经信息字符串
-    let menstrualInfo = null;
-    if (isFemale && (menstrual_cycle || menstrual_flow || menstrual_pain)) {
-      const parts = [];
-      if (menstrual_cycle && menstrual_cycle !== '正常') parts.push(`周期${menstrual_cycle}`);
-      if (menstrual_flow && menstrual_flow !== '正常') parts.push(menstrual_flow);
-      if (menstrual_pain === '有痛经') parts.push('痛经');
-      if (parts.length > 0) {
-        menstrualInfo = parts.join('、');
-      }
-    }
-    
-    const { data: insertData, error } = await supabase
+    const { data, error } = await supabase
       .from('diagnosis_records')
-      .insert({
-        name,
-        age,
-        weight,
-        gender,
-        menstrual_info: menstrualInfo,
-        prescription: prescriptionInfo.prescription,
-        final_prescription: result.prescription,
-        meridian,
-        answers: JSON.stringify(answers),
-      })
-      .select();
+      .insert([
+        {
+          name: userInfo.name,
+          gender: userInfo.gender || '未知',
+          prescription: finalPrescription,
+        }
+      ])
+      .select()
+      .single();
 
     if (error) {
       console.error('保存记录失败:', error);
     } else {
-      console.log('保存记录成功:', insertData);
+      console.log('保存记录成功:', data);
     }
 
-    return NextResponse.json({ success: true, data: result });
+    return NextResponse.json({
+      success: true,
+      data: {
+        meridian,
+        meridianFull,
+        syndrome,
+        prescription,
+        finalPrescription,
+        composition,
+        dosage,
+        preparation,
+        usage,
+        effects,
+        indications,
+        contraindications,
+        notes,
+        dietaryAdvice,
+        lifestyleAdvice,
+        combinedPrescription,
+        menstrualInfo,
+      }
+    });
+
   } catch (error) {
-    console.error('辨证失败:', error);
-    return NextResponse.json({ error: '辨证失败' }, { status: 500 });
+    console.error('诊断API错误:', error);
+    return NextResponse.json({ error: '诊断失败' }, { status: 500 });
   }
 }
