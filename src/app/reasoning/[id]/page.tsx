@@ -39,18 +39,12 @@ export default function ReasoningPage() {
 	const router = useRouter();
 	const recordId = params.id as string;
 	const [diagnosis, setDiagnosis] = useState<DiagnosisResult | null>(null);
-	const [isVerified, setIsVerified] = useState(false);
 	const [copySuccess, setCopySuccess] = useState(false);
 	const reasoningRef = useRef<HTMLDivElement>(null);
 
 	useEffect(() => {
-		// 检查支付状态
-		const paymentVerified = sessionStorage.getItem('paymentVerified');
+		// 直接显示内容，无需支付验证
 		const savedDiagnosis = sessionStorage.getItem('diagnosisResult');
-		
-		if (paymentVerified === 'true') {
-			setIsVerified(true);
-		}
 		
 		if (savedDiagnosis) {
 			try {
@@ -82,25 +76,6 @@ export default function ReasoningPage() {
 			setTimeout(() => setCopySuccess(false), 2000);
 		}
 	};
-
-	// 未支付验证
-	if (!isVerified) {
-		return (
-			<div className="min-h-screen bg-gradient-to-b from-amber-50 to-orange-50 flex items-center justify-center">
-				<div className="bg-white rounded-2xl shadow-xl p-8 max-w-md mx-4 text-center">
-					<div className="text-6xl mb-4">🔒</div>
-					<h1 className="text-2xl font-bold text-gray-800 mb-2">请先完成支付</h1>
-					<p className="text-gray-600 mb-6">查看完整辨证推理过程需要支付 ¥10.00</p>
-					<Link
-						href="/payment"
-						className="inline-block px-6 py-3 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg font-medium hover:from-red-700 hover:to-red-800 transition-all"
-					>
-						前往支付
-					</Link>
-				</div>
-			</div>
-		);
-	}
 
 	// 没有诊断数据
 	if (!diagnosis) {

@@ -63,10 +63,21 @@ export default function Home() {
 
         {/* 书籍简介 */}
         <div className="max-w-2xl mx-auto text-center mb-12">
-          <p className="text-amber-800/80 leading-relaxed text-base">
-            本书以《伤寒论》六经辨证体系为核心，系统梳理太阳、阳明、少阳、太阴、少阴、厥阴六经病证的辨证要点与用药法则，
-            为临床中医辨证施治提供实用指导。
-          </p>
+          <div className="bg-white/60 rounded-2xl p-8 shadow-lg border border-amber-200">
+            <h2 className="text-2xl font-bold text-amber-900 mb-4">健康之路 · 道武医</h2>
+            <p className="text-amber-800 leading-relaxed text-base mb-4">
+              以字为桥，贯通道、武、医的生命修行
+            </p>
+            <div className="w-16 h-px bg-amber-900/30 mx-auto mb-4" />
+            <p className="text-stone-700 leading-relaxed text-sm">
+              本书将<strong className="text-amber-900">道家修行</strong>、<strong className="text-amber-900">武术修炼</strong>与<strong className="text-amber-900">六经辨证</strong>的系统效应完美结合，
+              是一部融贯古今的修炼养生宝典。
+            </p>
+            <p className="text-stone-600 leading-relaxed text-sm mt-3">
+              以《伤寒论》六经辨证体系为核心，融合十问歌问诊、开阖枢理论、五行拳功法，
+              从辨证施治到站桩修炼，为读者提供从理论到实践的完整养生指南。
+            </p>
+          </div>
         </div>
 
         {/* 六经概览卡片 */}
