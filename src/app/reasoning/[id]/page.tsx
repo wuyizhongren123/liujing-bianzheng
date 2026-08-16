@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -40,6 +40,8 @@ export default function ReasoningPage() {
 	const recordId = params.id as string;
 	const [diagnosis, setDiagnosis] = useState<DiagnosisResult | null>(null);
 	const [isVerified, setIsVerified] = useState(false);
+	const [copySuccess, setCopySuccess] = useState(false);
+	const reasoningRef = useRef<HTMLDivElement>(null);
 
 	useEffect(() => {
 		// 检查支付状态
@@ -58,6 +60,28 @@ export default function ReasoningPage() {
 			}
 		}
 	}, []);
+
+	// 复制页面文字
+	const handleCopyText = async () => {
+		const content = document.getElementById('reasoning-content');
+		if (!content) return;
+		const text = content.innerText;
+		try {
+			await navigator.clipboard.writeText(text);
+			setCopySuccess(true);
+			setTimeout(() => setCopySuccess(false), 2000);
+		} catch (e) {
+			// fallback
+			const textarea = document.createElement('textarea');
+			textarea.value = text;
+			document.body.appendChild(textarea);
+			textarea.select();
+			document.execCommand('copy');
+			document.body.removeChild(textarea);
+			setCopySuccess(true);
+			setTimeout(() => setCopySuccess(false), 2000);
+		}
+	};
 
 	// 未支付验证
 	if (!isVerified) {
@@ -500,12 +524,12 @@ export default function ReasoningPage() {
 
 				{/* 操作按钮 */}
 				<div className="flex flex-col sm:flex-row gap-4">
-					<Link
-						href="/consultation/result"
+					<button
+						onClick={handleCopyText}
 						className="flex-1 py-3 px-4 bg-white border-2 border-amber-600 text-amber-700 rounded-lg font-medium hover:bg-amber-50 transition-colors text-center"
 					>
-						返回辨证结果
-					</Link>
+						{copySuccess ? "已复制到剪贴板" : "复制文字 / 截图保存"}
+					</button>
 					<Link
 						href="/"
 						className="flex-1 py-3 px-4 bg-gradient-to-r from-amber-600 to-amber-700 text-white rounded-lg font-medium hover:from-amber-700 hover:to-amber-800 transition-all text-center"
