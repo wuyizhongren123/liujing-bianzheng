@@ -183,13 +183,13 @@ export default function ResultPage() {
           </p>
         </div>
 
-        {/* 查看推理过程 - 付费 */}
+        {/* 查看推理过程 */}
         <div className="bg-gradient-to-r from-amber-100 to-orange-100 rounded-xl shadow-lg p-5 mb-4 border-2 border-amber-300">
           <div className="text-center">
             <h3 className="text-lg font-bold text-amber-900 mb-3">查看完整辨证推理过程</h3>
             <div className="bg-white/60 rounded-lg p-4 mb-4 text-left">
               <p className="text-stone-700 text-sm mb-2">
-                <span className="font-bold text-amber-800">付费后您将看到：</span>
+                <span className="font-bold text-amber-800">您将看到：</span>
               </p>
               <ul className="text-stone-600 text-sm space-y-1.5 list-disc list-inside">
                 <li>完整的六经辨证推理过程（十问→评分→辨证）</li>
@@ -203,14 +203,15 @@ export default function ResultPage() {
               onClick={() => {
                 // 保存当前结果到sessionStorage，用于推理页面
                 sessionStorage.setItem('pendingReasoning', JSON.stringify(result));
-                router.push('/payment');
+                router.push('/reasoning/direct');
               }}
               className="w-full py-4 px-6 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white rounded-xl font-bold text-lg shadow-lg transition-all flex items-center justify-center gap-2"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5h7a2 2 0 012 2v10a2 2 0 01-2 2H9a2 2 0 01-2-2V7a2 2 0 012-2z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5v14M9 9h4M9 13h4" />
               </svg>
-              查看辨证推理过程 ¥10
+              查看完整辨证推理过程
             </button>
           </div>
         </div>

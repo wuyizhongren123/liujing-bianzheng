@@ -814,6 +814,55 @@ export async function POST(request: NextRequest) {
       finalIndications = prescriptionInfo.indications + '；' + combinedPrescriptionInfo.indications;
     }
 
+    // 添加健脾胃药材：白术、当归（所有方剂都加）
+    const 健脾Herbs = ['白术', '当归'];
+    const baseHerbs = finalComposition.split('、').map(h => h.trim());
+    const uniqueHerbs = [...new Set([...baseHerbs, ...健脾Herbs])];
+    finalComposition = uniqueHerbs.join('、');
+    
+    // 添加白术、当归的剂量
+    const baseDosageParts = finalDosage.split('，').map(d => d.trim());
+    const dosageMap = new Map<string, string>();
+    
+    // 先解析现有剂量
+    baseDosageParts.forEach(part => {
+      const match = part.match(/^(.+?)\d+g/);
+      if (match) {
+        const herbName = match[1].trim();
+        dosageMap.set(herbName, part);
+      }
+    });
+    
+    // 添加白术、当归剂量（各9g）
+    if (!dosageMap.has('白术')) dosageMap.set('白术', '白术9g');
+    if (!dosageMap.has('当归')) dosageMap.set('当归', '当归9g');
+    
+    // 有西药史的加鸡内金、神曲、炒麦芽
+    const hasWesternMedicine = answers.q9_medicine === true;
+    if (hasWesternMedicine) {
+      const 消化Herbs = ['鸡内金', '神曲', '炒麦芽'];
+      const currentHerbs = finalComposition.split('、').map(h => h.trim());
+      finalComposition = [...new Set([...currentHerbs, ...消化Herbs])].join('、');
+      
+      if (!dosageMap.has('鸡内金')) dosageMap.set('鸡内金', '鸡内金9g');
+      if (!dosageMap.has('神曲')) dosageMap.set('神曲', '神曲9g');
+      if (!dosageMap.has('炒麦芽')) dosageMap.set('炒麦芽', '炒麦芽15g');
+    }
+    
+    // 用下法的加木香、砂仁、大黄（阳明腑实证用大承气汤）
+    const isPurgingMethod = syndrome === '阳明腑实证' || prescriptionInfo.prescription.includes('大承气汤');
+    if (isPurgingMethod) {
+      const 下法Herbs = ['木香', '砂仁', '大黄'];
+      const currentHerbs = finalComposition.split('、').map(h => h.trim());
+      finalComposition = [...new Set([...currentHerbs, ...下法Herbs])].join('、');
+      
+      if (!dosageMap.has('木香')) dosageMap.set('木香', '木香6g');
+      if (!dosageMap.has('砂仁')) dosageMap.set('砂仁', '砂仁6g（后下）');
+      if (!dosageMap.has('大黄')) dosageMap.set('大黄', '大黄12g（后下）');
+    }
+    
+    finalDosage = Array.from(dosageMap.values()).join('，');
+
     const result: DiagnosisResult = {
       meridian,
       meridianFull: meridian,
