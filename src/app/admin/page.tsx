@@ -270,10 +270,6 @@ export default function AdminPage() {
                   </th>
                   <th className="px-4 py-3 text-left text-sm font-medium text-stone-600">姓名</th>
                   <th className="px-4 py-3 text-left text-sm font-medium text-stone-600">性别</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-stone-600">年龄</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-stone-600">体重</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-stone-600">月经</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-stone-600">病经</th>
                   <th className="px-4 py-3 text-left text-sm font-medium text-stone-600">推荐方剂</th>
                   <th className="px-4 py-3 text-left text-sm font-medium text-stone-600">提交时间</th>
                 </tr>
@@ -296,10 +292,6 @@ export default function AdminPage() {
                     </td>
                     <td className="px-4 py-3 text-sm text-stone-800">{record.name}</td>
                     <td className="px-4 py-3 text-sm text-stone-600">{record.gender || '-'}</td>
-                    <td className="px-4 py-3 text-sm text-stone-600">{record.age}岁</td>
-                    <td className="px-4 py-3 text-sm text-stone-600">{record.weight}kg</td>
-                    <td className="px-4 py-3 text-sm text-pink-600">{record.menstrual_info || '-'}</td>
-                    <td className="px-4 py-3 text-sm text-red-700 font-medium">{record.meridian || '-'}</td>
                     <td className="px-4 py-3 text-sm text-stone-800">{record.final_prescription || record.prescription}</td>
                     <td className="px-4 py-3 text-sm text-stone-500">
                       {new Date(record.created_at).toLocaleString('zh-CN')}
