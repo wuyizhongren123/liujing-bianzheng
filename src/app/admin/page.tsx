@@ -28,7 +28,10 @@ export default function AdminPage() {
   const fetchRecords = async (name = '') => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/admin?password=${password}&name=${encodeURIComponent(name)}`);
+      const timestamp = Date.now();
+      const res = await fetch(`/api/admin?password=${password}&name=${encodeURIComponent(name)}&_t=${timestamp}`, {
+        cache: 'no-store',
+      });
       const data = await res.json();
       if (data.success) {
         setRecords(data.data || []);

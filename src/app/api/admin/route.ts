@@ -38,7 +38,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: '查询失败' }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, data });
+    return NextResponse.json({ success: true, data }, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      },
+    });
   } catch (error) {
     console.error('获取记录失败:', error);
     return NextResponse.json({ error: '获取记录失败' }, { status: 500 });
