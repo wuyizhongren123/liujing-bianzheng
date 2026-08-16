@@ -8,9 +8,15 @@ export default function UserInfoPage() {
   const [formData, setFormData] = useState({
     name: '',
     age: '',
-    weight: ''
+    weight: '',
+    gender: '' as '' | '男' | '女',
+    // 月经相关（仅女性显示）
+    menstrual_cycle: '' as '' | '正常' | '提前' | '推后' | '不定期',
+    menstrual_flow: '' as '' | '正常' | '量多' | '量少',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const isFemale = formData.gender === '女';
 
   const validate = () => {
     const newErrors: Record<string, string> = {};
@@ -28,6 +34,20 @@ export default function UserInfoPage() {
     if (!formData.weight || isNaN(weight) || weight < 1 || weight > 300) {
       newErrors.weight = '请输入有效体重（1-300kg）';
     }
+
+    if (!formData.gender) {
+      newErrors.gender = '请选择性别';
+    }
+
+    // 女性且年龄在生育期（12-55岁），需要填写月经信息
+    if (isFemale && age >= 12 && age <= 55) {
+      if (!formData.menstrual_cycle) {
+        newErrors.menstrual_cycle = '请选择月经周期';
+      }
+      if (!formData.menstrual_flow) {
+        newErrors.menstrual_flow = '请选择月经量';
+      }
+    }
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -37,11 +57,16 @@ export default function UserInfoPage() {
     e.preventDefault();
     
     if (validate()) {
+      const age = parseInt(formData.age);
       // 保存用户信息到sessionStorage
       sessionStorage.setItem('userInfo', JSON.stringify({
         name: formData.name.trim(),
-        age: parseInt(formData.age),
-        weight: parseFloat(formData.weight)
+        age,
+        weight: parseFloat(formData.weight),
+        gender: formData.gender,
+        // 仅女性且生育期才传月经信息
+        menstrual_cycle: (isFemale && age >= 12 && age <= 55) ? formData.menstrual_cycle : null,
+        menstrual_flow: (isFemale && age >= 12 && age <= 55) ? formData.menstrual_flow : null,
       }));
       
       // 跳转到问诊页面
@@ -82,6 +107,40 @@ export default function UserInfoPage() {
               />
               {errors.name && (
                 <p className="text-red-600 text-sm mt-1">{errors.name}</p>
+              )}
+            </div>
+
+            {/* 性别 */}
+            <div>
+              <label className="block text-stone-700 font-medium mb-2">
+                性别 <span className="text-red-600">*</span>
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, gender: '男' })}
+                  className={`py-3 rounded-lg border-2 font-medium transition-all ${
+                    formData.gender === '男'
+                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                      : 'border-amber-200 text-stone-600 hover:border-amber-400'
+                  }`}
+                >
+                  男
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, gender: '女' })}
+                  className={`py-3 rounded-lg border-2 font-medium transition-all ${
+                    formData.gender === '女'
+                      ? 'border-pink-500 bg-pink-50 text-pink-700'
+                      : 'border-amber-200 text-stone-600 hover:border-amber-400'
+                  }`}
+                >
+                  女
+                </button>
+              </div>
+              {errors.gender && (
+                <p className="text-red-600 text-sm mt-1">{errors.gender}</p>
               )}
             </div>
 
@@ -138,11 +197,73 @@ export default function UserInfoPage() {
               )}
             </div>
 
+            {/* 月经信息（仅女性且生育期显示） */}
+            {isFemale && formData.age && parseInt(formData.age) >= 12 && parseInt(formData.age) <= 55 && (
+              <div className="border-t border-amber-200 pt-5 space-y-5">
+                <div className="bg-pink-50 rounded-lg p-3 border border-pink-200">
+                  <p className="text-pink-800 text-sm font-medium">女性生理信息（必填）</p>
+                </div>
+
+                {/* 月经周期 */}
+                <div>
+                  <label className="block text-stone-700 font-medium mb-2">
+                    月经周期 <span className="text-red-600">*</span>
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {['正常', '提前', '推后', '不定期'].map((option) => (
+                      <button
+                        key={option}
+                        type="button"
+                        onClick={() => setFormData({ ...formData, menstrual_cycle: option as typeof formData.menstrual_cycle })}
+                        className={`py-2 px-3 rounded-lg border-2 text-sm font-medium transition-all ${
+                          formData.menstrual_cycle === option
+                            ? 'border-pink-500 bg-pink-50 text-pink-700'
+                            : 'border-amber-200 text-stone-600 hover:border-amber-400'
+                        }`}
+                      >
+                        {option}
+                      </button>
+                    ))}
+                  </div>
+                  {errors.menstrual_cycle && (
+                    <p className="text-red-600 text-sm mt-1">{errors.menstrual_cycle}</p>
+                  )}
+                </div>
+
+                {/* 月经量 */}
+                <div>
+                  <label className="block text-stone-700 font-medium mb-2">
+                    月经量 <span className="text-red-600">*</span>
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {['正常', '量多', '量少'].map((option) => (
+                      <button
+                        key={option}
+                        type="button"
+                        onClick={() => setFormData({ ...formData, menstrual_flow: option as typeof formData.menstrual_flow })}
+                        className={`py-2 px-3 rounded-lg border-2 text-sm font-medium transition-all ${
+                          formData.menstrual_flow === option
+                            ? 'border-pink-500 bg-pink-50 text-pink-700'
+                            : 'border-amber-200 text-stone-600 hover:border-amber-400'
+                        }`}
+                      >
+                        {option}
+                      </button>
+                    ))}
+                  </div>
+                  {errors.menstrual_flow && (
+                    <p className="text-red-600 text-sm mt-1">{errors.menstrual_flow}</p>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* 提示信息 */}
             <div className="bg-amber-50 rounded-lg p-4 border border-amber-200">
               <p className="text-stone-600 text-sm">
                 <span className="font-medium text-amber-800">温馨提示：</span>
                 儿童（&lt;12岁）和老人（&gt;65岁）的药量会自动调整，请如实填写年龄。
+                {isFemale && ' 女性患者需填写月经信息，以便精准辨证。'}
               </p>
             </div>
 

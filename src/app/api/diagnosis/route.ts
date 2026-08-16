@@ -659,6 +659,9 @@ export async function POST(request: NextRequest) {
     const name = body.name || userInfo.name;
     const age = body.age || userInfo.age;
     const weight = body.weight || userInfo.weight;
+    const gender = userInfo.gender || null;
+    const menstrual_cycle = userInfo.menstrual_cycle || null;
+    const menstrual_flow = userInfo.menstrual_flow || null;
     
     // 字段映射：支持新格式（chills, fever等）和旧格式（q1_cold, q1_fever等）
     const rawAnswers = body.answers || {};
@@ -860,6 +863,33 @@ export async function POST(request: NextRequest) {
       if (!dosageMap.has('砂仁')) dosageMap.set('砂仁', '砂仁6g（后下）');
       if (!dosageMap.has('大黄')) dosageMap.set('大黄', '大黄12g（后下）');
     }
+
+    // 女性妇科问题：月经异常合温经汤
+    const isFemale = gender === '女';
+    const hasMenstrualIssue = isFemale && (
+      menstrual_cycle === '提前' || menstrual_cycle === '推后' || menstrual_cycle === '不定期' ||
+      menstrual_flow === '量多' || menstrual_flow === '量少'
+    );
+    let gynecologyNote = '';
+    if (hasMenstrualIssue) {
+      // 温经汤组成：吴茱萸、当归、川芎、白芍、人参、桂枝、阿胶、生姜、甘草、半夏、麦冬
+      const 温经Herbs = ['吴茱萸', '川芎', '阿胶', '麦冬'];
+      const currentHerbs = finalComposition.split('、').map(h => h.trim());
+      finalComposition = [...new Set([...currentHerbs, ...温经Herbs])].join('、');
+      
+      if (!dosageMap.has('吴茱萸')) dosageMap.set('吴茱萸', '吴茱萸6g');
+      if (!dosageMap.has('川芎')) dosageMap.set('川芎', '川芎9g');
+      if (!dosageMap.has('阿胶')) dosageMap.set('阿胶', '阿胶9g（烊化）');
+      if (!dosageMap.has('麦冬')) dosageMap.set('麦冬', '麦冬9g');
+      
+      // 构建妇科说明
+      const cycleDesc = menstrual_cycle && menstrual_cycle !== '正常' ? `月经周期${menstrual_cycle}` : '';
+      const flowDesc = menstrual_flow && menstrual_flow !== '正常' ? `月经量${menstrual_flow}` : '';
+      const menstrualDesc = [cycleDesc, flowDesc].filter(Boolean).join('，');
+      gynecologyNote = `患者为女性，兼有${menstrualDesc}，合温经汤温经散寒、养血调经。`;
+      
+      console.log('[妇科] 女性患者，月经异常:', menstrualDesc, '合温经汤');
+    }
     
     finalDosage = Array.from(dosageMap.values()).join('，');
 
@@ -867,15 +897,15 @@ export async function POST(request: NextRequest) {
       meridian,
       meridianFull: meridian,
       syndrome,
-      prescription: prescriptionInfo.prescription + (combinedPrescriptionInfo && combinedPrescriptionInfo.prescription !== prescriptionInfo.prescription ? ' 合 ' + combinedPrescriptionInfo.prescription : ''),
+      prescription: prescriptionInfo.prescription + (combinedPrescriptionInfo && combinedPrescriptionInfo.prescription !== prescriptionInfo.prescription ? ' 合 ' + combinedPrescriptionInfo.prescription : '') + (hasMenstrualIssue ? ' 合 温经汤' : ''),
       composition: finalComposition,
       dosage: finalDosage,
       preparation: prescriptionInfo.preparation,
       usage: prescriptionInfo.usage,
-      effects: finalEffects,
-      indications: finalIndications,
+      effects: finalEffects + (hasMenstrualIssue ? '，温经散寒，养血调经' : ''),
+      indications: finalIndications + (hasMenstrualIssue ? '；兼调月经' : ''),
       contraindications: "", // 禁忌不显示
-      notes: prescriptionInfo.notes, // 不包含截断方注意事项
+      notes: prescriptionInfo.notes + (gynecologyNote ? ' ' + gynecologyNote : ''), // 不包含截断方注意事项
       interception: {
         type: null, // 截断类型不显示，留在付费后的推理中
         reason: '', // 截断原因不显示，留在付费后的推理中

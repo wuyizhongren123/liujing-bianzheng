@@ -7,6 +7,9 @@ interface UserInfo {
   name: string;
   age: number;
   weight: number;
+  gender: '男' | '女';
+  menstrual_cycle?: string | null;
+  menstrual_flow?: string | null;
 }
 
 interface Answers {
