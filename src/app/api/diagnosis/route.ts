@@ -884,14 +884,38 @@ export async function POST(request: NextRequest) {
       if (!dosageMap.has('阿胶')) dosageMap.set('阿胶', '阿胶9g（烊化）');
       if (!dosageMap.has('麦冬')) dosageMap.set('麦冬', '麦冬9g');
       
+      // 月经量多：加黄芪（补气摄血）
+      if (menstrual_flow === '量多') {
+        if (!dosageMap.has('黄芪')) dosageMap.set('黄芪', '黄芪15g');
+        const h = finalComposition.split('、').map(x => x.trim());
+        if (!h.includes('黄芪')) finalComposition = [...h, '黄芪'].join('、');
+      }
+      
+      // 月经量少：加熟地（补血养阴）
+      if (menstrual_flow === '量少') {
+        if (!dosageMap.has('熟地')) dosageMap.set('熟地', '熟地12g');
+        const h = finalComposition.split('、').map(x => x.trim());
+        if (!h.includes('熟地')) finalComposition = [...h, '熟地'].join('、');
+      }
+      
       // 构建妇科说明
       const cycleDesc = menstrual_cycle && menstrual_cycle !== '正常' ? `月经周期${menstrual_cycle}` : '';
       const flowDesc = menstrual_flow && menstrual_flow !== '正常' ? `月经量${menstrual_flow}` : '';
       const painDesc = menstrual_pain === '有痛经' ? '痛经' : '';
       const menstrualDesc = [cycleDesc, flowDesc, painDesc].filter(Boolean).join('、');
       gynecologyNote = `患者为女性，兼有${menstrualDesc}，合温经汤温经散寒、养血调经。`;
+      if (menstrual_flow === '量多') gynecologyNote += '量多加黄芪补气摄血。';
+      if (menstrual_flow === '量少') gynecologyNote += '量少加熟地补血养阴。';
       
       console.log('[妇科] 女性患者，月经异常:', menstrualDesc, '合温经汤');
+    }
+
+    // 三阴病（太阴、少阴、厥阴）加生地
+    const yinMeridians = ['太阴病', '少阴病', '厥阴病'];
+    if (yinMeridians.includes(meridian)) {
+      if (!dosageMap.has('生地')) dosageMap.set('生地', '生地12g');
+      const h = finalComposition.split('、').map(x => x.trim());
+      if (!h.includes('生地')) finalComposition = [...h, '生地'].join('、');
     }
     
     finalDosage = Array.from(dosageMap.values()).join('，');
