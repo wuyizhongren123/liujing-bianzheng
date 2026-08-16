@@ -1,45 +1,52 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 
 export default function PaymentPage() {
 	const router = useRouter();
-	const [copied, setCopied] = useState(false);
 	const [isWeChat, setIsWeChat] = useState(false);
 	const [countdown, setCountdown] = useState(0);
+	const [showTip, setShowTip] = useState(false);
+	const qrRef = useRef<HTMLDivElement>(null);
+	const longPressTimer = useRef<NodeJS.Timeout | null>(null);
 
 	useEffect(() => {
-		// 检测是否在微信浏览器内
 		const ua = navigator.userAgent.toLowerCase();
 		setIsWeChat(ua.includes('micromessenger'));
 	}, []);
 
-	const handleCopyAmount = () => {
-		navigator.clipboard.writeText('10.00');
-		setCopied(true);
-		setTimeout(() => setCopied(false), 2000);
+	// 长按二维码处理
+	const handleLongPressStart = () => {
+		longPressTimer.current = setTimeout(handleLongPress, 800);
 	};
 
-	const handleOpenWeChat = () => {
-		// 尝试打开微信
-		window.location.href = 'weixin://';
+	const handleLongPressEnd = () => {
+		if (longPressTimer.current) {
+			clearTimeout(longPressTimer.current);
+			longPressTimer.current = null;
+		}
 	};
 
+	const handleLongPress = () => {
+		if (!isWeChat) {
+			window.location.href = 'weixin://';
+		}
+	};
+
+	// 支付完成自动跳转
 	const handlePaymentComplete = () => {
-		// 生成一个唯一的记录ID
 		const recordId = Date.now().toString(36) + Math.random().toString(36).substr(2);
-		// 保存支付状态到sessionStorage
 		sessionStorage.setItem('paymentVerified', 'true');
 		sessionStorage.setItem('paymentRecordId', recordId);
-		// 跳转到推理逻辑展示页面
 		router.push(`/reasoning/${recordId}`);
 	};
 
+	// 开始倒计时自动跳转
 	const startCountdown = () => {
-		setCountdown(5);
+		setCountdown(10);
 		const timer = setInterval(() => {
 			setCountdown((prev) => {
 				if (prev <= 1) {
@@ -50,6 +57,13 @@ export default function PaymentPage() {
 				return prev - 1;
 			});
 		}, 1000);
+	};
+
+	// 复制微信号
+	const handleCopyWeChat = () => {
+		navigator.clipboard.writeText('ZRLSGZRLS');
+		setShowTip(true);
+		setTimeout(() => setShowTip(false), 2000);
 	};
 
 	return (
@@ -79,57 +93,45 @@ export default function PaymentPage() {
 
 					{/* 收款码区域 */}
 					<div className="p-6">
-						{isWeChat ? (
-							/* 微信内浏览器 - 长按识别图中二维码 */
-							<div className="text-center">
-								<div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
-									<p className="text-green-700 font-medium">👆 长按下方二维码识别支付</p>
+						{/* 二维码 - 支持长按 */}
+						<div className="text-center mb-6">
+							{isWeChat ? (
+								<div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
+									<p className="text-green-700 font-medium text-sm">👆 长按下方二维码直接支付</p>
 								</div>
-								<div className="flex justify-center mb-6">
-									<div className="relative w-[280px] h-[280px] rounded-xl overflow-hidden shadow-lg border-4 border-white ring-2 ring-gray-200">
-										<Image
-											src="/qrcode_payment.jpg"
-											alt="微信收款码"
-											fill
-											className="object-cover"
-											priority
-										/>
-									</div>
+							) : (
+								<div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+									<p className="text-blue-700 font-medium text-sm">📱 长按二维码打开微信扫码支付</p>
+								</div>
+							)}
+
+							{/* 二维码容器 - 支持长按 */}
+							<div
+								ref={qrRef}
+								onTouchStart={handleLongPressStart}
+								onTouchEnd={handleLongPressEnd}
+								onTouchCancel={handleLongPressEnd}
+								onContextMenu={(e) => {
+									e.preventDefault();
+									handleLongPress();
+								}}
+								className="inline-block cursor-pointer active:scale-95 transition-transform"
+							>
+								<div className="relative w-[260px] h-[260px] rounded-xl overflow-hidden shadow-lg border-4 border-white ring-2 ring-gray-200 mx-auto">
+									<Image
+										src="/qrcode_payment.jpg"
+										alt="微信收款码 - 长按支付"
+										fill
+										className="object-cover"
+										priority
+									/>
 								</div>
 							</div>
-						) : (
-							/* 非微信浏览器 - 扫码或打开微信 */
-							<div className="text-center">
-								<div className="text-center mb-4">
-									<p className="text-gray-600 text-sm mb-1">请使用微信扫描二维码</p>
-									<p className="text-gray-500 text-xs">完成支付</p>
-								</div>
 
-								{/* 收款码图片 */}
-								<div className="flex justify-center mb-6">
-									<div className="relative w-[280px] h-[280px] rounded-xl overflow-hidden shadow-lg border-4 border-white ring-2 ring-gray-200">
-										<Image
-											src="/qrcode_payment.jpg"
-											alt="微信收款码"
-											fill
-											className="object-cover"
-											priority
-										/>
-									</div>
-								</div>
-
-								{/* 打开微信按钮 */}
-								<button
-									onClick={handleOpenWeChat}
-									className="w-full py-3 px-4 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2 mb-4"
-								>
-									<svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-										<path d="M8.691 2.188C3.891 2.188 0 5.476 0 9.53c0 2.212 1.17 4.203 3.002 5.55a.59.59 0 01.213.665l-.39 1.48c-.019.07-.048.141-.048.213 0 .163.13.295.29.295a.326.326 0 00.167-.054l1.903-1.114a.864.864 0 01.717-.098 10.16 10.16 0 002.837.403c.276 0 .543-.027.811-.05-.857-2.578.157-4.972 1.932-6.446 1.703-1.415 3.882-1.98 5.853-1.838-.576-3.583-4.196-6.348-8.596-6.348zM5.785 5.991c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 01-1.162 1.178A1.17 1.17 0 014.623 7.17c0-.651.52-1.18 1.162-1.18zm5.813 0c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 01-1.162 1.178 1.17 1.17 0 01-1.162-1.178c0-.651.52-1.18 1.162-1.18zm5.34 2.867c-1.797-.052-3.746.512-5.28 1.786-1.72 1.428-2.687 3.72-1.78 6.22.944 2.453 3.666 4.229 6.884 4.229.826 0 1.622-.12 2.361-.336a.722.722 0 01.598.082l1.584.926a.272.272 0 00.14.047c.134 0 .24-.111.24-.247 0-.06-.023-.12-.038-.177l-.327-1.233a.582.582 0 01-.023-.156.49.49 0 01.201-.398C23.024 18.48 24 16.82 24 14.98c0-3.21-2.931-5.837-7.062-6.122zm-2.18 2.769c.535 0 .969.44.969.982a.976.976 0 01-.969.983.976.976 0 01-.969-.983c0-.542.434-.982.97-.982zm4.844 0c.535 0 .969.44.969.982a.976.976 0 01-.969.983.976.976 0 01-.969-.983c0-.542.434-.982.969-.982z"/>
-									</svg>
-									打开微信
-								</button>
-							</div>
-						)}
+							<p className="text-gray-500 text-xs mt-3">
+								{isWeChat ? '微信内长按自动识别' : '长按二维码打开微信扫码'}
+							</p>
+						</div>
 
 						{/* 收款人信息 */}
 						<div className="text-center space-y-2 mb-6">
@@ -143,34 +145,13 @@ export default function PaymentPage() {
 
 						{/* 操作按钮 */}
 						<div className="space-y-3">
-							<button
-								onClick={handleCopyAmount}
-								className="w-full py-3 px-4 bg-amber-100 hover:bg-amber-200 text-amber-800 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
-							>
-								{copied ? (
-									<>
-										<svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-										</svg>
-										已复制金额
-									</>
-								) : (
-									<>
-										<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-										</svg>
-										复制金额 ¥10.00
-									</>
-								)}
-							</button>
-
-							{/* 已完成支付按钮 - 点击后5秒倒计时自动跳转 */}
+							{/* 支付完成按钮 - 点击后10秒倒计时自动跳转 */}
 							{countdown > 0 ? (
 								<div className="w-full py-4 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-xl font-bold text-lg shadow-lg flex items-center justify-center gap-2">
 									<svg className="w-6 h-6 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
 									</svg>
-									{countdown}秒后进入推理页面...
+									{countdown}秒后自动进入推理页面...
 								</div>
 							) : (
 								<button
@@ -180,7 +161,7 @@ export default function PaymentPage() {
 									<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 										<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
 									</svg>
-									支付完成，进入推理过程
+									我已支付，进入推理过程
 								</button>
 							)}
 						</div>
@@ -191,25 +172,33 @@ export default function PaymentPage() {
 								<svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
 									<path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
 								</svg>
-								温馨提示
+								支付说明
 							</h3>
 							<ul className="text-amber-700 text-xs space-y-1">
 								<li>• 请确认收款人为「郭中仁」后再付款</li>
 								<li>• 付款时请备注您的姓名</li>
-								<li>• 付款完成后点击按钮，5秒后自动进入推理页面</li>
+								<li>• 支付完成后点击按钮，10秒后自动进入推理页面</li>
 								{isWeChat && <li>• 微信内可直接长按二维码识别支付</li>}
-								{!isWeChat && <li>• 点击「打开微信」可直接跳转微信App</li>}
+								{!isWeChat && <li>• 长按二维码可直接打开微信扫码</li>}
 							</ul>
 						</div>
 
 						{/* 联系方式 */}
 						<div className="mt-4 p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200">
-							<div className="flex items-center justify-center gap-2">
+							<div className="flex items-center justify-center gap-2 flex-wrap">
 								<svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 24 24">
 									<path d="M8.691 2.188C3.891 2.188 0 5.476 0 9.53c0 2.212 1.17 4.203 3.002 5.55a.59.59 0 01.213.665l-.39 1.48c-.019.07-.048.141-.048.213 0 .163.13.295.29.295a.326.326 0 00.167-.054l1.903-1.114a.864.864 0 01.717-.098 10.16 10.16 0 002.837.403c.276 0 .543-.027.811-.05-.857-2.578.157-4.972 1.932-6.446 1.703-1.415 3.882-1.98 5.853-1.838-.576-3.583-4.196-6.348-8.596-6.348zM5.785 5.991c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 01-1.162 1.178A1.17 1.17 0 014.623 7.17c0-.651.52-1.18 1.162-1.18zm5.813 0c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 01-1.162 1.178 1.17 1.17 0 01-1.162-1.178c0-.651.52-1.18 1.162-1.18zm5.34 2.867c-1.797-.052-3.746.512-5.28 1.786-1.72 1.428-2.687 3.72-1.78 6.22.944 2.453 3.666 4.229 6.884 4.229.826 0 1.622-.12 2.361-.336a.722.722 0 01.598.082l1.584.926a.272.272 0 00.14.047c.134 0 .24-.111.24-.247 0-.06-.023-.12-.038-.177l-.327-1.233a.582.582 0 01-.023-.156.49.49 0 01.201-.398C23.024 18.48 24 16.82 24 14.98c0-3.21-2.931-5.837-7.062-6.122zm-2.18 2.769c.535 0 .969.44.969.982a.976.976 0 01-.969.983.976.976 0 01-.969-.983c0-.542.434-.982.97-.982zm4.844 0c.535 0 .969.44.969.982a.976.976 0 01-.969.983.976.976 0 01-.969-.983c0-.542.434-.982.969-.982z"/>
 								</svg>
 								<span className="text-stone-700 text-sm">如有疑问，请联系微信：</span>
-								<span className="font-mono font-bold text-green-700">ZRLSGZRLS</span>
+								<button
+									onClick={handleCopyWeChat}
+									className="font-mono font-bold text-green-700 bg-green-100 px-2 py-1 rounded hover:bg-green-200 transition-colors"
+								>
+									ZRLSGZRLS
+								</button>
+								{showTip && (
+									<span className="text-green-600 text-xs animate-pulse">已复制!</span>
+								)}
 							</div>
 						</div>
 					</div>
