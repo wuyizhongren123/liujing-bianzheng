@@ -174,38 +174,6 @@ export default function ResultPage() {
           </div>
         )}
 
-        {/* 饮食起居建议 */}
-        <div className="bg-white rounded-xl shadow-lg p-5 mb-4 border border-amber-200">
-          <h2 className="text-lg font-bold text-red-900 mb-3 flex items-center">
-            <span className="w-1 h-5 bg-red-700 rounded mr-2"></span>
-            调护建议
-          </h2>
-          <div className="space-y-3">
-            {result.dietaryAdvice && (
-              <div>
-                <p className="text-stone-600 text-sm mb-1">饮食建议</p>
-                <ul className="text-stone-800 list-disc list-inside space-y-1">
-                  {Array.isArray(result.dietaryAdvice) 
-                    ? result.dietaryAdvice.map((item, i) => <li key={i}>{item}</li>)
-                    : <li>{result.dietaryAdvice}</li>
-                  }
-                </ul>
-              </div>
-            )}
-            {result.lifestyleAdvice && (
-              <div>
-                <p className="text-stone-600 text-sm mb-1">起居建议</p>
-                <ul className="text-stone-800 list-disc list-inside space-y-1">
-                  {Array.isArray(result.lifestyleAdvice)
-                    ? result.lifestyleAdvice.map((item, i) => <li key={i}>{item}</li>)
-                    : <li>{result.lifestyleAdvice}</li>
-                  }
-                </ul>
-              </div>
-            )}
-          </div>
-        </div>
-
         {/* 免责声明 */}
         <div className="bg-red-50 rounded-xl p-4 mb-6 border border-red-200">
           <h3 className="font-bold text-red-900 mb-2 text-center">免责声明</h3>
@@ -215,24 +183,22 @@ export default function ResultPage() {
           </p>
         </div>
 
-        {/* 联系方式 */}
-        <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-4 mb-6 border border-green-200">
-          <div className="flex items-center justify-center gap-2">
-            <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M8.691 2.188C3.891 2.188 0 5.476 0 9.53c0 2.212 1.17 4.203 3.002 5.55a.59.59 0 01.213.665l-.39 1.48c-.019.07-.048.141-.048.213 0 .163.13.295.29.295a.326.326 0 00.167-.054l1.903-1.114a.864.864 0 01.717-.098 10.16 10.16 0 002.837.403c.276 0 .543-.027.811-.05-.857-2.578.157-4.972 1.932-6.446 1.703-1.415 3.882-1.98 5.853-1.838-.576-3.583-4.196-6.348-8.596-6.348zM5.785 5.991c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 01-1.162 1.178A1.17 1.17 0 014.623 7.17c0-.651.52-1.18 1.162-1.18zm5.813 0c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 01-1.162 1.178 1.17 1.17 0 01-1.162-1.178c0-.651.52-1.18 1.162-1.18zm5.34 2.867c-1.797-.052-3.746.512-5.28 1.786-1.72 1.428-2.687 3.72-1.78 6.22.944 2.453 3.666 4.229 6.884 4.229.826 0 1.622-.12 2.361-.336a.722.722 0 01.598.082l1.584.926a.272.272 0 00.14.047c.134 0 .24-.111.24-.247 0-.06-.023-.12-.038-.177l-.327-1.233a.582.582 0 01-.023-.156.49.49 0 01.201-.398C23.024 18.48 24 16.82 24 14.98c0-3.21-2.931-5.837-7.062-6.122zm-2.18 2.769c.535 0 .969.44.969.982a.976.976 0 01-.969.983.976.976 0 01-.969-.983c0-.542.434-.982.97-.982zm4.844 0c.535 0 .969.44.969.982a.976.976 0 01-.969.983.976.976 0 01-.969-.983c0-.542.434-.982.969-.982z"/>
-            </svg>
-            <span className="text-stone-700 text-sm">如有疑问，请联系微信：</span>
-            <span className="font-mono font-bold text-green-700">ZRLSGZRLS</span>
-          </div>
-        </div>
-
         {/* 查看推理过程 - 付费 */}
         <div className="bg-gradient-to-r from-amber-100 to-orange-100 rounded-xl shadow-lg p-5 mb-4 border-2 border-amber-300">
           <div className="text-center">
-            <h3 className="text-lg font-bold text-amber-900 mb-2">查看完整辨证推理过程</h3>
-            <p className="text-stone-600 text-sm mb-4">
-              了解如何根据您的症状，一步步推导出辨证结论
-            </p>
+            <h3 className="text-lg font-bold text-amber-900 mb-3">查看完整辨证推理过程</h3>
+            <div className="bg-white/60 rounded-lg p-4 mb-4 text-left">
+              <p className="text-stone-700 text-sm mb-2">
+                <span className="font-bold text-amber-800">付费后您将看到：</span>
+              </p>
+              <ul className="text-stone-600 text-sm space-y-1.5 list-disc list-inside">
+                <li>完整的六经辨证推理过程（十问→评分→辨证）</li>
+                <li>开阖枢截断理论详解（为什么合用枢机方剂）</li>
+                <li>三阴病传变路径分析</li>
+                <li>用药后饮食注意事项</li>
+                <li>郭中仁书中锻炼方法（站桩 + 五行拳）</li>
+              </ul>
+            </div>
             <button
               onClick={() => {
                 // 保存当前结果到sessionStorage，用于推理页面

@@ -348,6 +348,136 @@ export default function ReasoningPage() {
 					))}
 				</div>
 
+				{/* 饮食与锻炼建议 */}
+				<div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl p-6 mb-6 shadow-sm border border-amber-100">
+					<div className="flex items-center gap-3 mb-4">
+						<span className="text-3xl">🥗</span>
+						<h2 className="text-xl font-bold text-amber-900">用药后饮食注意</h2>
+					</div>
+					<div className="space-y-3 text-sm text-amber-800">
+						<div className="bg-white rounded-lg p-4 border border-amber-200">
+							<p className="font-semibold mb-2">❌ 少吃或忌口：</p>
+							<ul className="space-y-1 list-disc list-inside">
+								<li>生冷食物（冰饮、凉菜、生鱼片等）</li>
+								<li>鱼虾海鲜（寒凉之品，易伤脾胃）</li>
+								<li>辛辣刺激（辣椒、花椒、大蒜等）</li>
+								<li>水果（多数水果性寒，服药期间少吃）</li>
+								<li>牛奶、咖啡（寒凉刺激，影响药效）</li>
+							</ul>
+						</div>
+						<div className="bg-white rounded-lg p-4 border border-amber-200">
+							<p className="font-semibold mb-2">✅ 宜食：</p>
+							<ul className="space-y-1 list-disc list-inside">
+								<li>温热饮食（热粥、热汤面等）</li>
+								<li>易消化食物（小米粥、山药、大枣等）</li>
+								<li>清淡为主，少油少盐</li>
+							</ul>
+						</div>
+					</div>
+				</div>
+
+				{/* 锻炼方法 */}
+				<div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-6 mb-6 shadow-sm border border-green-100">
+					<div className="flex items-center gap-3 mb-4">
+						<span className="text-3xl"></span>
+						<h2 className="text-xl font-bold text-green-900">郭中仁·道武医锻炼法</h2>
+					</div>
+					
+					<div className="space-y-4 text-sm text-green-800">
+						{/* 站桩 */}
+						<div className="bg-white rounded-lg p-4 border border-green-200">
+							<h3 className="font-bold text-green-900 mb-3 flex items-center gap-2">
+								<span></span> 站桩功（调枢机）
+							</h3>
+							<div className="space-y-2">
+								<p className="font-semibold">【理论依据】</p>
+								<p className="text-xs leading-relaxed">
+									站桩调的就是开阖枢这一套气化。形体中正，枢机才能转，一身阴阳才能正常开阖。
+									少阳为阳枢，少阴为阴枢，站桩时脊柱正直，正是调少阴枢；双肩放松，正是调少阳枢。
+								</p>
+								<p className="font-semibold mt-3">【动作要领】</p>
+								<ol className="space-y-1 list-decimal list-inside text-xs">
+									<li>双脚平行站立，与肩同宽</li>
+									<li>膝盖微屈，不超过脚尖</li>
+									<li>脊柱竖直，头顶如悬（虚领顶劲）</li>
+									<li>双肩放松，双臂环抱于胸前（如抱球）</li>
+									<li>手心向内，十指相对，相距约一拳</li>
+									<li>目视前方，舌抵上腭，自然呼吸</li>
+									<li>每次站 15-30 分钟，循序渐进</li>
+								</ol>
+								<p className="font-semibold mt-3">【功效】</p>
+								<p className="text-xs">
+									调和阴阳，转动枢机，使太阳能开、阳明能阖、太阴能布散、厥阴能收藏。
+									长期练习可改善体质，增强正气，防病于未然。
+								</p>
+							</div>
+						</div>
+
+						{/* 五行拳 */}
+						<div className="bg-white rounded-lg p-4 border border-green-200">
+							<h3 className="font-bold text-green-900 mb-3 flex items-center gap-2">
+								<span>👊</span> 五行拳（调五脏）
+							</h3>
+							<div className="space-y-2">
+								<p className="font-semibold">【理论依据】</p>
+								<p className="text-xs leading-relaxed">
+									五行拳对应五脏：劈拳属金（肺）、钻拳属水（肾）、崩拳属木（肝）、炮拳属火（心）、横拳属土（脾）。
+									通过五行拳的练习，可以调和五脏气血，配合六经辨证，达到内外兼修的效果。
+								</p>
+								<p className="font-semibold mt-3">【五行对应】</p>
+								<div className="grid grid-cols-1 gap-2 text-xs">
+									<div className="bg-gray-50 rounded p-2">
+										<span className="font-semibold">劈拳（金·肺）</span>：双手下劈，如斧劈木，调肺气宣降
+									</div>
+									<div className="bg-gray-50 rounded p-2">
+										<span className="font-semibold">钻拳（水·肾）</span>：拳向上钻，如泉涌出，调肾气升腾
+									</div>
+									<div className="bg-gray-50 rounded p-2">
+										<span className="font-semibold">崩拳（木·肝）</span>：拳向前崩，如箭离弦，调肝气疏泄
+									</div>
+									<div className="bg-gray-50 rounded p-2">
+										<span className="font-semibold">炮拳（火·心）</span>：拳向上架，如火焰升，调心气旺盛
+									</div>
+									<div className="bg-gray-50 rounded p-2">
+										<span className="font-semibold">横拳（土·脾）</span>：拳向横拨，如土承载，调脾气运化
+									</div>
+								</div>
+								<p className="font-semibold mt-3">【练习建议】</p>
+								<p className="text-xs">
+									每日练习五行拳各 10-20 次，配合站桩，可调和五脏气血，增强六经气化功能。
+									建议在空气流通处练习，穿着宽松衣物，空腹或饭后 1 小时进行。
+								</p>
+							</div>
+						</div>
+
+						{/* 配图 */}
+						<div className="bg-white rounded-lg p-4 border border-green-200">
+							<h3 className="font-bold text-green-900 mb-3 flex items-center gap-2">
+								<span>📖</span> 动作图示
+							</h3>
+							<div className="grid grid-cols-2 gap-3">
+								<div className="text-center">
+									<div className="bg-gray-100 rounded-lg p-4 mb-2 aspect-square flex items-center justify-center">
+										<div className="text-6xl"></div>
+									</div>
+									<p className="text-xs font-semibold">站桩姿势</p>
+									<p className="text-xs text-gray-600">双脚平行·双臂环抱</p>
+								</div>
+								<div className="text-center">
+									<div className="bg-gray-100 rounded-lg p-4 mb-2 aspect-square flex items-center justify-center">
+										<div className="text-6xl">🤸</div>
+									</div>
+									<p className="text-xs font-semibold">五行拳</p>
+									<p className="text-xs text-gray-600">劈钻崩炮横</p>
+								</div>
+							</div>
+							<p className="text-xs text-gray-500 mt-3 text-center">
+								详细动作图解请参考《健康之路 道武医》郭中仁著
+							</p>
+						</div>
+					</div>
+				</div>
+
 				{/* 最终结论 */}
 				<div className="bg-gradient-to-r from-green-600 to-green-700 text-white rounded-2xl p-6 mb-6 shadow-lg">
 					<div className="flex items-center gap-3 mb-4">
