@@ -26,7 +26,7 @@ export default function AdminPage() {
       const res = await fetch(`/api/admin?password=${password}&name=${encodeURIComponent(name)}`);
       const data = await res.json();
       if (data.success) {
-        setRecords(data.data.records);
+        setRecords(data.data || []);
         setIsAuthenticated(true);
         setError('');
       } else {
