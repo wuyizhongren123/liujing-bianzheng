@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
     const sort = searchParams.get('sort') || 'desc';
 
     // 验证密码
-    if (password !== 'zhongren2025') {
+    if (password !== '123456') {
       return NextResponse.json({ error: '密码错误' }, { status: 401 });
     }
 
