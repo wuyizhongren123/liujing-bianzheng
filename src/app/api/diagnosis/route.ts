@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/storage/database/supabase-client';
 
-const supabase = getSupabase();
-
 interface UserInfo {
   name: string;
   age: number;
@@ -50,6 +48,7 @@ interface Answers {
 
 export async function POST(request: NextRequest) {
   try {
+    const supabase = getSupabase();
     const body = await request.json();
     const { userInfo, answers } = body;
 
