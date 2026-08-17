@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabase } from '@/storage/database/supabase-client';
+import { getSupabase, getSupabaseServiceRole } from '@/storage/database/supabase-client';
 
 interface UserInfo {
   name: string;
@@ -48,7 +48,7 @@ interface Answers {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = getSupabase();
+    const supabase = getSupabaseServiceRole();
     const body = await request.json();
     const { userInfo, answers } = body;
 

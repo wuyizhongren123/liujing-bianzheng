@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabase } from '@/storage/database/supabase-client';
+import { getSupabaseServiceRole } from '@/storage/database/supabase-client';
 
 // 获取诊断记录
 export async function GET(request: NextRequest) {
-  const supabase = getSupabase();
+  const supabase = getSupabaseServiceRole();
   const { searchParams } = new URL(request.url);
   const password = searchParams.get('password');
   const name = searchParams.get('name');
@@ -37,6 +37,7 @@ export async function GET(request: NextRequest) {
 
 // 删除诊断记录
 export async function DELETE(request: NextRequest) {
+  const supabase = getSupabaseServiceRole();
   const { searchParams } = new URL(request.url);
   const password = searchParams.get('password');
   const ids = searchParams.get('ids');
