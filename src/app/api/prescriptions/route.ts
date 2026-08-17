@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
-import { getSupabaseClient } from '@/storage/database/supabase-client';
+import { getSupabase } from '@/storage/database/supabase-client';
 
 export async function GET() {
   try {
-    const client = getSupabaseClient();
+    const client = getSupabase();
     const { data, error } = await client
       .from('prescriptions')
       .select('id, syndrome_id, name, composition, dosage, effects, indications, sort_order')

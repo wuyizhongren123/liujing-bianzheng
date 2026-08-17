@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getSupabaseClient } from '@/storage/database/supabase-client';
+import { getSupabase } from '@/storage/database/supabase-client';
 
 export async function GET(
   _request: Request,
@@ -12,7 +12,7 @@ export async function GET(
       return NextResponse.json({ success: false, error: '无效的证型ID' }, { status: 400 });
     }
 
-    const client = getSupabaseClient();
+    const client = getSupabase();
     const { data, error } = await client
       .from('prescriptions')
       .select('id, syndrome_id, name, composition, dosage, preparation, usage, effects, indications, contraindications, notes, sort_order')

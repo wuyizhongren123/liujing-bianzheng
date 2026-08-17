@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseClient } from '@/storage/database/supabase-client';
+import { getSupabase } from '@/storage/database/supabase-client';
 
-const supabase = getSupabaseClient();
+const supabase = getSupabase();
 
 // 获取诊断记录
 export async function GET(request: NextRequest) {

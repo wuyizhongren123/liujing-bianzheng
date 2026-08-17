@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseClient } from '@/storage/database/supabase-client';
+import { getSupabase } from '@/storage/database/supabase-client';
 
-const supabase = getSupabaseClient();
+const supabase = getSupabase();
 
 interface UserInfo {
   name: string;
